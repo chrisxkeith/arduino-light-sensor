@@ -1,9 +1,27 @@
 
-const String gitHubRep = "https://github.com/chrisxkeith/arduino-light-sensor";
-const String gitHubCommitHash = "to be filled in after push";
+class Config {
+  public:
+    const String gitHubRepository = "https://github.com/chrisxkeith/arduino-light-sensor";
+    const String gitHubCommitHash = "to be filled in after push";
+    const int publishRateInSeconds = 1;
 
-int publishRateInSeconds = 1;
-unsigned long lastPublishInSeconds = 0;
+    unsigned long lastPublishInSeconds = 0;
+
+    void dump() {
+      String s("gitHubRepository : ");
+      s.concat(gitHubRepository);
+      Serial.println(s);
+      s.remove(0);
+      s.concat("gitHubCommitHash : ");
+      s.concat(gitHubCommitHash);
+      Serial.println(s);
+      s.remove(0);
+      s.concat("publishRateInSeconds : ");
+      s.concat(publishRateInSeconds);
+      Serial.println(s);
+    }
+};
+Config config;
 
 #include <EEPROM.h>
 class EEPROM_helper {
@@ -103,8 +121,13 @@ class Sensor {
         }
       }
     }
-};
 
+    void publish() {
+      config.lastPublishInSeconds = millis() / 1000;
+      publishData();
+      clear();
+    }
+};
 Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Button {
@@ -115,17 +138,26 @@ class Button {
     int read() {
       return digitalRead(2);
     }
+    void handleEvent() {
+      if (read() == 0) {
+        if (lightSensor1.saving) {
+          eeprom_helper.writeInt(-1);
+          lightSensor1.saving = false;
+          led.off();
+        } else {
+          eeprom_helper.init();
+          lightSensor1.saving = true;
+          led.on();
+        }
+        delay(1000); // give user time to release the button.
+      }
+    }
 };
 Button button;
 
-void publish() {
-  lastPublishInSeconds = millis() / 1000;
-  lightSensor1.publishData();
-  lightSensor1.clear();
-}
-
 void setup() {
   Serial.begin(115200);
+  config.dump();
   eeprom_helper.report();
   eeprom_helper.dump();
   Serial.println("setup() : finished.");
@@ -133,18 +165,8 @@ void setup() {
 
 void loop() {
   lightSensor1.sample();
-  if (button.read() == 0) {
-    if (lightSensor1.saving) {
-      eeprom_helper.writeInt(-1);
-      lightSensor1.saving = false;
-      led.off();
-    } else {
-      eeprom_helper.init();
-      lightSensor1.saving = true;
-      led.on();
-    }
-  }
-  if ((lastPublishInSeconds + publishRateInSeconds) <= (millis() / 1000)) {
-    publish();
+  button.handleEvent();
+  if ((config.lastPublishInSeconds + config.publishRateInSeconds) <= (millis() / 1000)) {
+    lightSensor1.publish();
   }
 }
