@@ -30,14 +30,16 @@ class OLEDWrapper {
         }
         oled->erase(); // Clear the display's internal memory
         oled->display();
-        delay(1000);
-        oled->erase(); // Clear the buffer.
     }
 
     void display(String title, uint8_t x, uint8_t y) {
         oled->erase();
         oled->setFont(&QW_FONT_5X7);
         oled->text(x, y, title);
+        oled->display();
+    }
+    void clear() {
+        oled->erase();
         oled->display();
     }
 };
@@ -47,20 +49,14 @@ class Spinner {
   private:
     int middleX = oledWrapper.oled->getWidth() / 2;
     int middleY = oledWrapper.oled->getHeight() / 2;
-    int xEnd, yEnd;
     int lineWidth = min(middleX, middleY);
-    int color;
-    int deg;
+    int color = COLOR_WHITE;
+    int deg = 0;
 
   public:
-    Spinner() {
-      color = COLOR_WHITE;
-      deg = 0;
-    }
-
     void display() {
-      xEnd = lineWidth * cos(deg * M_PI / 180.0);
-      yEnd = lineWidth * sin(deg * M_PI / 180.0);
+      int xEnd = lineWidth * cos(deg * M_PI / 180.0);
+      int yEnd = lineWidth * sin(deg * M_PI / 180.0);
 
       oledWrapper.oled->line(middleX, middleY, middleX + xEnd, middleY + yEnd, color);
       oledWrapper.oled->display();
@@ -85,6 +81,9 @@ class Sensor {
     double  total;
 
   public:
+    const int THRESHOLD = 175;
+    bool on = false;
+
     Sensor(int pin, String name) {
       this->pin = pin;
       this->name = name;
@@ -120,20 +119,43 @@ class Sensor {
 };
 Sensor lightSensor1(A0, "Arduino light sensor");
 
+class App {
+  private:
+    void display_on_oled() {
+      int value = lightSensor1.getValue();
+      if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
+        lightSensor1.on = !lightSensor1.on;
+        oledWrapper.clear();
+        if (lightSensor1.on) {
+          spinner.display();
+        }
+      } else {
+        if (lightSensor1.on) {
+          spinner.display();
+        }
+      }
+    }
+
+  public:
+    void setup() {
+      Serial.begin(115200);
+      config.dump();
+      Wire.begin();
+      oledWrapper.startup();
+      Serial.println("setup() : finished.");
+    }
+    void loop() {
+      lightSensor1.sample();
+      display_on_oled();
+    }
+};
+App app;
+
 void setup() {
-  Serial.begin(115200);
-  config.dump();
-  Wire.begin();
-  oledWrapper.startup();
-  oledWrapper.oled->erase();
-  oledWrapper.oled->text(0, oledWrapper.oled->getHeight() / 2, "Starting...");
-  oledWrapper.oled->display();
-  Serial.println("setup() : finished.");
+  app.setup();
 }
 
 void loop() {
-  lightSensor1.sample();
-  lightSensor1.publish();
-  delay(2000);
+  app.loop();
 }
  
