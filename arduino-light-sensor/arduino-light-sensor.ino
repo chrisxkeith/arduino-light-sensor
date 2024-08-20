@@ -89,8 +89,7 @@ class Sensor {
       this->name = name;
       clear();
       pinMode(pin, INPUT);
-    }
-    
+    }    
     void sample() {
       if (pin >= A0 && pin <= A5) {
           total += analogRead(pin);
@@ -98,20 +97,13 @@ class Sensor {
           total += digitalRead(pin);
       }
       nSamples++;
-    }
-    
+    }    
     void clear() {
       nSamples = 0;
       total = 0.0;
     }
-
     void publishData() {
       Serial.println(String(getValue()));
-    }
-
-    void publish() {
-      publishData();
-      clear();
     }
     int getValue() {
         return round(total / nSamples);
@@ -147,6 +139,7 @@ class App {
     void loop() {
       lightSensor1.sample();
       display_on_oled();
+      lightSensor1.clear();
     }
 };
 App app;
