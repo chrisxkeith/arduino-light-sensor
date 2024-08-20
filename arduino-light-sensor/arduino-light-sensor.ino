@@ -16,16 +16,21 @@ Config config;
 #include <SparkFun_Qwiic_OLED.h>
 #include <res/qw_fnt_5x7.h>
 #include <math.h>
+#include <wire.h>
 
 class OLEDWrapper {
   public:
     QwiicMicroOLED* oled = new QwiicMicroOLED();
 
-    OLEDWrapper() {
-        oled->begin();    // Initialize the OLED
+    void startup() {
+        if (oled->begin() == false) {
+          Serial.println("oled->begin() failed. Freezing...");
+          while (true)
+            ;
+        }
         oled->erase(); // Clear the display's internal memory
-        oled->display();  // Display what's in the buffer (splashscreen)
-        delay(1000);     // Delay 1000 ms
+        oled->display();
+        delay(1000);
         oled->erase(); // Clear the buffer.
     }
 
@@ -118,13 +123,17 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 void setup() {
   Serial.begin(115200);
   config.dump();
+  Wire.begin();
+  oledWrapper.startup();
+  oledWrapper.oled->erase();
+  oledWrapper.oled->text(0, oledWrapper.oled->getHeight() / 2, "Starting...");
+  oledWrapper.oled->display();
   Serial.println("setup() : finished.");
 }
 
 void loop() {
   lightSensor1.sample();
   lightSensor1.publish();
-  // oledWrapper.display(String(lightSensor1.getValue()), 0, 0);
   delay(2000);
 }
  
