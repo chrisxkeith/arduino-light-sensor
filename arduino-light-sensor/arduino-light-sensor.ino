@@ -1,20 +1,12 @@
 
 #include <U8g2lib.h>
 
-class Config {
-  public:
-    const String gitHubRepository = "https://github.com/chrisxkeith/arduino-light-sensor";
-
-    void dump() {
-      String s("gitHubRepository : ");
-      s.concat(gitHubRepository);
-      Serial.println(s);
-    }
-};
-Config config;
-
 #include <SparkFun_Qwiic_OLED.h>
-#include <res/qw_fnt_5x7.h>
+#include <res/qw_fnt_5x7.h>       // &QW_FONT_5X7
+#include <res/qw_fnt_8x16.h>      // &QW_FONT_8X16
+#include <res/qw_fnt_7segment.h>  // &QW_FONT_7SEGMENT
+#include <res/qw_fnt_31x48.h>     // &QW_FONT_31X48
+#include <res/qw_fnt_largenum.h>  // &QW_FONT_LARGENUM
 #include <math.h>
 #include <wire.h>
 
@@ -34,7 +26,7 @@ class OLEDWrapper {
 
     void display(String title, uint8_t x, uint8_t y) {
         oled->erase();
-        oled->setFont(&QW_FONT_5X7);
+        oled->setFont(&QW_FONT_LARGENUM);
         oled->text(x, y, title);
         oled->display();
     }
@@ -44,6 +36,30 @@ class OLEDWrapper {
     }
 };
 OLEDWrapper oledWrapper;
+
+class Config {
+  public:
+    const String gitHubRepository = "https://github.com/chrisxkeith/arduino-light-sensor";
+
+    void dump() {
+      String s("gitHubRepository: ");
+      s.concat(gitHubRepository);
+      Serial.println(s);
+      s.remove(0);
+      s.concat("oledWrapper.oled->getWidth(): ");
+      s.concat(String(oledWrapper.oled->getWidth()));
+      Serial.println(s);
+      s.remove(0);
+      s.concat("oledWrapper.oled->getHeight(): ");
+      s.concat(String(oledWrapper.oled->getHeight()));
+      Serial.println(s);
+      s.remove(0);
+      s.concat("build: ");
+      s.concat("~ Fri, Aug 23, 2024  9:39:25 AM");
+      Serial.println(s);
+    }
+};
+Config config;
 
 class Spinner {
   private:
@@ -113,17 +129,25 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class App {
   private:
+    const bool SHOW_VALUE = true;
     void display_on_oled() {
       int value = lightSensor1.getValue();
-      if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
-        lightSensor1.on = !lightSensor1.on;
-        oledWrapper.clear();
-        if (lightSensor1.on) {
-          spinner.display();
-        }
+      if (SHOW_VALUE) {
+        String s(value);
+        Serial.println(s);
+        oledWrapper.display(s, 0, 1); 
+        delay(3000);
       } else {
-        if (lightSensor1.on) {
-          spinner.display();
+        if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
+          lightSensor1.on = !lightSensor1.on;
+          oledWrapper.clear();
+          if (lightSensor1.on) {
+            spinner.display();
+          }
+        } else {
+          if (lightSensor1.on) {
+            spinner.display();
+          }
         }
       }
     }
