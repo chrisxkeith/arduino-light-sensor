@@ -37,30 +37,6 @@ class OLEDWrapper {
 };
 OLEDWrapper oledWrapper;
 
-class Config {
-  public:
-    const String gitHubRepository = "https://github.com/chrisxkeith/arduino-light-sensor";
-
-    void dump() {
-      String s("gitHubRepository: ");
-      s.concat(gitHubRepository);
-      Serial.println(s);
-      s.remove(0);
-      s.concat("oledWrapper.oled->getWidth(): ");
-      s.concat(String(oledWrapper.oled->getWidth()));
-      Serial.println(s);
-      s.remove(0);
-      s.concat("oledWrapper.oled->getHeight(): ");
-      s.concat(String(oledWrapper.oled->getHeight()));
-      Serial.println(s);
-      s.remove(0);
-      s.concat("build: ");
-      s.concat("~ Fri, Aug 23, 2024  9:39:25 AM");
-      Serial.println(s);
-    }
-};
-Config config;
-
 class Spinner {
   private:
     int middleX = oledWrapper.oled->getWidth() / 2;
@@ -97,7 +73,7 @@ class Sensor {
     double  total;
 
   public:
-    const int THRESHOLD = 175;
+    const int THRESHOLD = 20;
     bool on = false;
 
     Sensor(int pin, String name) {
@@ -127,16 +103,43 @@ class Sensor {
 };
 Sensor lightSensor1(A0, "Arduino light sensor");
 
+class Config {
+  public:
+    const String gitHubRepository = "https://github.com/chrisxkeith/arduino-light-sensor";
+
+    void dump() {
+      String s("gitHubRepository: ");
+      s.concat(gitHubRepository);
+      Serial.println(s);
+      s.remove(0);
+      s.concat("oledWrapper.oled->getWidth(): ");
+      s.concat(String(oledWrapper.oled->getWidth()));
+      Serial.println(s);
+      s.remove(0);
+      s.concat("oledWrapper.oled->getHeight(): ");
+      s.concat(String(oledWrapper.oled->getHeight()));
+      Serial.println(s);
+      s.remove(0);
+      s.concat("build: ");
+      s.concat("~ Sun, Aug 25, 2024  1:06:41 PM");
+      Serial.println(s);
+      s.remove(0);
+      s.concat("THRESHOLD: ");
+      s.concat(String(lightSensor1.THRESHOLD));
+      Serial.println(s);
+    }
+};
+Config config;
+
 class App {
   private:
-    const bool SHOW_VALUE = true;
     void display_on_oled() {
       int value = lightSensor1.getValue();
-      if (SHOW_VALUE) {
-        String s(value);
-        Serial.println(s);
+      String s(value);
+      Serial.println(s);
+      if (millis() < 30 * 1000) { // show values for first 30 seconds to help calibration
         oledWrapper.display(s, 0, 1); 
-        delay(3000);
+        delay(1000);
       } else {
         if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
           lightSensor1.on = !lightSensor1.on;
