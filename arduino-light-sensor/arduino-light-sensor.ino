@@ -147,7 +147,7 @@ class Sensor {
           total += digitalRead(pin);
       }
       nSamples++;
-    }    
+    }  
     void clear() {
       nSamples = 0;
       total = 0.0;
@@ -188,15 +188,18 @@ Config config;
 
 class App {
   private:
-    void gatherValues(int totalSeconds) {
+    bool gatheringData = true;
+    void gatherValues() {
+      int totalSeconds = 10;
       int total = 0;
       for (int i = 0; i < totalSeconds; i++) {
+        lightSensor1.sample();
         int value = lightSensor1.getValue();
-        String s(value);
-        Serial.println(s);
-        oledWrapper->display(s, 0, 1); 
+        oledWrapper->display(String(totalSeconds - i), 0, 1);
+        Serial.println(String(value)); 
         delay(1000);
         total += value;
+        lightSensor1.clear();
       }
       int avg = total / totalSeconds;
       String avgStr("Average: ");
@@ -206,10 +209,12 @@ class App {
       delay(5000);
     }
     void display_on_oled() {
-      if (millis() < 40 * 1000) { // show values for first 40+ seconds to help calibration
-        gatherValues(20);
-        gatherValues(20);
+      if (gatheringData) {
+        gatherValues();
+        gatherValues();
+        gatheringData = false;
       } else {
+        lightSensor1.sample();
         int value = lightSensor1.getValue();
         if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
           lightSensor1.on = !lightSensor1.on;
@@ -222,6 +227,7 @@ class App {
             spinner.display();
           }
         }
+        lightSensor1.clear();
       }
     }
 
@@ -238,9 +244,7 @@ class App {
       Serial.println("setup() : finished.");
     }
     void loop() {
-      lightSensor1.sample();
       display_on_oled();
-      lightSensor1.clear();
     }
 };
 App app;
