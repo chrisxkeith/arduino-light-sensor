@@ -133,14 +133,29 @@ Config config;
 
 class App {
   private:
-    void display_on_oled() {
-      int value = lightSensor1.getValue();
-      String s(value);
-      Serial.println(s);
-      if (millis() < 30 * 1000) { // show values for first 30 seconds to help calibration
+    void gatherValues(int totalSeconds) {
+      int total = 0;
+      for (int i = 0; i < totalSeconds; i++) {
+        int value = lightSensor1.getValue();
+        String s(value);
+        Serial.println(s);
         oledWrapper.display(s, 0, 1); 
         delay(1000);
+        total += value;
+      }
+      int avg = total / totalSeconds;
+      String avgStr("Average: ");
+      avgStr.concat(avg);
+      Serial.println(avgStr);
+      oledWrapper.display(String(avg), 0, 1);
+      delay(5000);
+    }
+    void display_on_oled() {
+      if (millis() < 40 * 1000) { // show values for first 40+ seconds to help calibration
+        gatherValues(20);
+        gatherValues(20);
       } else {
+        int value = lightSensor1.getValue();
         if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
           lightSensor1.on = !lightSensor1.on;
           oledWrapper.clear();
