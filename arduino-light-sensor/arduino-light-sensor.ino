@@ -131,7 +131,7 @@ class Sensor {
     double  total;
 
   public:
-    const int THRESHOLD = 20;
+    const int THRESHOLD = 15;
     bool on = false;
 
     Sensor(int pin, String name) {
