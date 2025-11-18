@@ -66,7 +66,7 @@ class LargeOLEDWrapper {
 #include <res/qw_fnt_31x48.h>     // &QW_FONT_31X48
 #include <res/qw_fnt_largenum.h>  // &QW_FONT_LARGENUM
 #include <math.h>
-#include <wire.h>
+#include <Wire.h>
 
 class OLEDWrapper {
   public:
