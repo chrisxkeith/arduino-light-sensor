@@ -1,5 +1,6 @@
 {
     "configuration": "svl_baud=115200,loader=sparkfun_svl",
     "board": "SparkFun:apollo3:amap3redboard",
-    "sketch": "arduino-light-sensor/arduino-light-sensor.ino"
+    "sketch": "arduino-light-sensor/arduino-light-sensor.ino",
+    "port": "/dev/ttyUSB0"
 }

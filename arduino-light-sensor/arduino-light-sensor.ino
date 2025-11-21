@@ -1,6 +1,19 @@
 
 #include <U8g2lib.h>
 
+class Utils {
+  private:
+    static unsigned long lastPrintln;
+  public:
+    static void publish(String s) {
+      if (millis() < lastPrintln + 1000) {
+        delay(1000);
+      }
+      Serial.println(s);
+    }
+};
+unsigned long Utils::lastPrintln = 0;
+
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 class LargeOLEDWrapper {
@@ -69,12 +82,15 @@ class LargeOLEDWrapper {
 #include <Wire.h>
 
 class OLEDWrapper {
+  private:
+    bool    active = true;
   public:
     QwiicMicroOLED* oled = new QwiicMicroOLED();
 
     bool startup() {
         if (oled->begin() == false) {
-          Serial.println("oled->begin() failed. Switching...");
+          Utils::publish("oled->begin() failed. Switching...");
+          active = false;
           return false;
         }
         oled->erase(); // Clear the display's internal memory
@@ -83,14 +99,18 @@ class OLEDWrapper {
     }
 
     void display(String title, uint8_t x, uint8_t y) {
+      if (active) {
         oled->erase();
         oled->setFont(&QW_FONT_LARGENUM);
         oled->text(x, y, title);
         oled->display();
+      }
     }
     void clear() {
+      if (active) {
         oled->erase();
         oled->display();
+      }
     }
 };
 OLEDWrapper* oledWrapper = new OLEDWrapper();
@@ -129,6 +149,7 @@ class Sensor {
     String  name;
     int     nSamples;
     double  total;
+    unsigned long lastPublish = 0;
 
   public:
     const int THRESHOLD = 15;
@@ -153,7 +174,10 @@ class Sensor {
       total = 0.0;
     }
     void publishData() {
-      Serial.println(String(getValue()));
+      if (millis() > lastPublish + 2000) {
+        Utils::publish(String(getValue()));
+        lastPublish = millis();
+      }
     }
     int getValue() {
         return round(total / nSamples);
@@ -165,30 +189,30 @@ class Config {
   public:
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
-      Serial.println(s);
+      Utils::publish(s);
       s.remove(0);
-      s.concat("oledWrapper->oled->getWidth(): ");
+/*      s.concat("oledWrapper->oled->getWidth(): ");
       s.concat(String(oledWrapper->oled->getWidth()));
-      Serial.println(s);
+      Utils::publish(s);
       s.remove(0);
       s.concat("oledWrapper->oled->getHeight(): ");
       s.concat(String(oledWrapper->oled->getHeight()));
-      Serial.println(s);
+      Utils::publish(s);
       s.remove(0);
       s.concat("build: ");
       s.concat("~ Sun, Aug 25, 2024  1:06:41 PM");
-      Serial.println(s);
+      Utils::publish(s);
       s.remove(0);
       s.concat("THRESHOLD: ");
       s.concat(String(lightSensor1.THRESHOLD));
-      Serial.println(s);
-    }
+      Utils::publish(s);
+*/   }
 };
 Config config;
 
 class App {
   private:
-    bool gatheringData = true;
+    bool gatheringData = false;
     void gatherValues() {
       int totalSeconds = 10;
       int total = 0;
@@ -196,7 +220,7 @@ class App {
         lightSensor1.sample();
         int value = lightSensor1.getValue();
         oledWrapper->display(String(totalSeconds - i), 0, 1);
-        Serial.println(String(value)); 
+        Utils::publish(String(value)); 
         delay(1000);
         total += value;
         lightSensor1.clear();
@@ -204,7 +228,7 @@ class App {
       int avg = total / totalSeconds;
       String avgStr("Average: ");
       avgStr.concat(avg);
-      Serial.println(avgStr);
+      Utils::publish(avgStr);
       oledWrapper->display(String(avg), 0, 1);
       delay(5000);
     }
@@ -227,6 +251,7 @@ class App {
             spinner.display();
           }
         }
+        lightSensor1.publishData();
         lightSensor1.clear();
       }
     }
@@ -234,17 +259,19 @@ class App {
   public:
     void setup() {
       Serial.begin(115200);
+      Utils::publish("setup() : started.");
       config.dump();
       Wire.begin();
       if (!oledWrapper->startup()) {
-        // oledWrapper = new LargeOLEDWrapper();
-        Serial.println("Temporarily freezing...");
-        while (true) { ; }
+        Utils::publish("oledWrapper->startup() failed, switching, ...eventually...");
+//        oledWrapper = new LargeOLEDWrapper();
       }
-      Serial.println("setup() : finished.");
+      Utils::publish("setup() : finished.");
     }
     void loop() {
-      display_on_oled();
+//      display_on_oled();
+      Utils::publish(String(millis()));
+      delay(3000);
     }
 };
 App app;
