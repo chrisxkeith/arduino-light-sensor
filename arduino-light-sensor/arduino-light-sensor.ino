@@ -15,8 +15,9 @@ class Utils {
 unsigned long Utils::lastPrintln = 0;
 
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
-
-class LargeOLEDWrapper {
+const int COLOR_WHITE = 1;
+const int COLOR_BLACK = 0;
+class OLEDWrapper {
   private:
       const int START_BASELINE = 50;
       int       baseLine = START_BASELINE;
@@ -45,7 +46,7 @@ class LargeOLEDWrapper {
         this->baseLine = START_BASELINE;
       }
     }
-    void setup_OLED() {
+    void startup() {
       pinMode(10, OUTPUT);
       pinMode(9, OUTPUT);
       digitalWrite(10, 0);
@@ -71,54 +72,12 @@ class LargeOLEDWrapper {
       endDisplay();
     }
 };
-
-#include <SparkFun_Qwiic_OLED.h>
-#include <res/qw_fnt_5x7.h>       // &QW_FONT_5X7
-#include <res/qw_fnt_8x16.h>      // &QW_FONT_8X16
-#include <res/qw_fnt_7segment.h>  // &QW_FONT_7SEGMENT
-#include <res/qw_fnt_31x48.h>     // &QW_FONT_31X48
-#include <res/qw_fnt_largenum.h>  // &QW_FONT_LARGENUM
-#include <math.h>
-#include <Wire.h>
-
-class OLEDWrapper {
-  private:
-    bool    active = true;
-  public:
-    QwiicMicroOLED* oled = new QwiicMicroOLED();
-
-    bool startup() {
-        if (oled->begin() == false) {
-          Utils::publish("oled->begin() failed. Switching...");
-          active = false;
-          return false;
-        }
-        oled->erase(); // Clear the display's internal memory
-        oled->display();
-        return true;
-    }
-
-    void display(String title, uint8_t x, uint8_t y) {
-      if (active) {
-        oled->erase();
-        oled->setFont(&QW_FONT_LARGENUM);
-        oled->text(x, y, title);
-        oled->display();
-      }
-    }
-    void clear() {
-      if (active) {
-        oled->erase();
-        oled->display();
-      }
-    }
-};
 OLEDWrapper* oledWrapper = new OLEDWrapper();
 
 class Spinner {
   private:
-    int middleX = oledWrapper->oled->getWidth() / 2;
-    int middleY = oledWrapper->oled->getHeight() / 2;
+    int middleX = u8g2.getWidth() / 2;
+    int middleY = u8g2.getHeight() / 2;
     int lineWidth = min(middleX, middleY);
     int color = COLOR_WHITE;
     int deg = 0;
@@ -128,8 +87,10 @@ class Spinner {
       int xEnd = lineWidth * cos(deg * M_PI / 180.0);
       int yEnd = lineWidth * sin(deg * M_PI / 180.0);
 
-      oledWrapper->oled->line(middleX, middleY, middleX + xEnd, middleY + yEnd, color);
-      oledWrapper->oled->display();
+      u8g2.setDrawColor(color);
+      u8g2.drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
+      u8g2.sendBuffer();
+//      u8g2.display();
       deg++;
       if (deg >= 360) {
         deg = 0;
@@ -175,7 +136,9 @@ class Sensor {
     }
     void publishData() {
       if (millis() > lastPublish + 2000) {
-        Utils::publish(String(getValue()));
+        String s("Sensor value: ");
+        s.concat(getValue());
+        Utils::publish(s);
         lastPublish = millis();
       }
     }
@@ -191,22 +154,22 @@ class Config {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
       s.remove(0);
-/*      s.concat("oledWrapper->oled->getWidth(): ");
-      s.concat(String(oledWrapper->oled->getWidth()));
+      s.concat("u8g2.getWidth(): ");
+      s.concat(String(u8g2.getWidth()));
       Utils::publish(s);
       s.remove(0);
-      s.concat("oledWrapper->oled->getHeight(): ");
-      s.concat(String(oledWrapper->oled->getHeight()));
+      s.concat("u8g2.getHeight(): ");
+      s.concat(String(u8g2.getHeight()));
       Utils::publish(s);
       s.remove(0);
       s.concat("build: ");
-      s.concat("~ Sun, Aug 25, 2024  1:06:41 PM");
+      s.concat("~ Fri Nov 21 04:52:21 PM PST 2025");
       Utils::publish(s);
       s.remove(0);
       s.concat("THRESHOLD: ");
       s.concat(String(lightSensor1.THRESHOLD));
       Utils::publish(s);
-*/   }
+   }
 };
 Config config;
 
@@ -261,17 +224,10 @@ class App {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
       config.dump();
-      Wire.begin();
-      if (!oledWrapper->startup()) {
-        Utils::publish("oledWrapper->startup() failed, switching, ...eventually...");
-//        oledWrapper = new LargeOLEDWrapper();
-      }
       Utils::publish("setup() : finished.");
     }
     void loop() {
-//      display_on_oled();
-      Utils::publish(String(millis()));
-      delay(3000);
+      display_on_oled();
     }
 };
 App app;
