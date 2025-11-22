@@ -5,6 +5,8 @@ class Utils {
   private:
     static unsigned long lastPrintln;
   public:
+    static bool debug;
+    // Slows everything down to make Serial output readable.
     static void publish(String s) {
       if (millis() < lastPrintln + 1000) {
         delay(1000);
@@ -13,6 +15,7 @@ class Utils {
     }
 };
 unsigned long Utils::lastPrintln = 0;
+bool Utils::debug = false;
 
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 const int COLOR_WHITE = 1;
@@ -25,15 +28,14 @@ class OLEDWrapper {
     void u8g2_prepare(void) {
       u8g2.setFont(u8g2_font_fur49_tn);
       u8g2.setFontRefHeightExtendedText();
-      u8g2.setDrawColor(1);
+      u8g2.setDrawColor(COLOR_WHITE);
       u8g2.setFontDirection(0);
     }
-    void drawInt(int val) {
+    void display(int x, int y, String s) {
       u8g2_prepare();
       u8g2.clearBuffer();
-      u8g2.drawUTF8(2, this->baseLine, String(val).c_str());
       u8g2.setFont(u8g2_font_fur11_tf);
-      u8g2.drawUTF8(6, this->baseLine + 20, "Fahrenheit");
+      u8g2.drawUTF8(x, y, s.c_str());
       u8g2.sendBuffer();
     }
     void clear() {
@@ -87,10 +89,10 @@ class Spinner {
       int xEnd = lineWidth * cos(deg * M_PI / 180.0);
       int yEnd = lineWidth * sin(deg * M_PI / 180.0);
 
+      oledWrapper->u8g2_prepare();
       u8g2.setDrawColor(color);
       u8g2.drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
       u8g2.sendBuffer();
-//      u8g2.display();
       deg++;
       if (deg >= 360) {
         deg = 0;
@@ -135,6 +137,9 @@ class Sensor {
       total = 0.0;
     }
     void publishData() {
+      if (Utils::debug == false) {
+        return;
+      }
       if (millis() > lastPublish + 2000) {
         String s("Sensor value: ");
         s.concat(getValue());
@@ -223,7 +228,12 @@ class App {
     void setup() {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
+      oledWrapper->startup();
+      oledWrapper->display(2, 30, "setup started");
+      delay(3000);
       config.dump();
+      oledWrapper->display(2, 30, "setup finished");
+      delay(3000);
       Utils::publish("setup() : finished.");
     }
     void loop() {
