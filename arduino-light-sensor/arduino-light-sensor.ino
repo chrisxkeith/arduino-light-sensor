@@ -75,21 +75,27 @@ class OLEDWrapper {
       display(s, 0, 16);
       endDisplay();
     }
-    void frame(u8g2_uint_t x, u8g2_uint_t y, u8g2_uint_t w, u8g2_uint_t h) {
-      startDisplay(u8g2_font_fur11_tf);
-      u8g2.drawFrame(x, y, w, h);
-      endDisplay();
-    }
     void test() {
-      frame(0, 0, u8g2.getWidth(), u8g2.getHeight());
+      for (u8g2_uint_t h = u8g2.getHeight(); h > 95; h -= 1) {
+        startDisplay(u8g2_font_fur11_tf);
+        u8g2.drawFrame(0, 0, getWidth(), h);
+        u8g2.drawUTF8(8, 32, String(h).c_str());
+        endDisplay();
+      }
+    }
+    int getHeight() {
+      return 96; // ??? why does u8g2.getHeight() return 128 ???
+    }
+    int getWidth() {
+      return u8g2.getWidth();
     }
 };
 OLEDWrapper* oledWrapper = new OLEDWrapper();
 
 class Spinner {
   private:
-    int middleX = u8g2.getWidth() / 2;
-    int middleY = u8g2.getHeight() / 2;
+    int middleX = oledWrapper->getWidth() / 2;
+    int middleY = oledWrapper->getHeight() / 2;
     int lineWidth = min(middleX, middleY);
     int color = COLOR_WHITE;
     int deg = 0;
@@ -169,12 +175,12 @@ class Config {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
       s.remove(0);
-      s.concat("u8g2.getWidth(): ");
-      s.concat(String(u8g2.getWidth()));
+      s.concat("oledWrapper->getWidth(): ");
+      s.concat(String(oledWrapper->getWidth()));
       Utils::publish(s);
       s.remove(0);
-      s.concat("u8g2.getHeight(): ");
-      s.concat(String(u8g2.getHeight()));
+      s.concat("oledWrapper->getHeight(): ");
+      s.concat(String(oledWrapper->getHeight()));
       Utils::publish(s);
       s.remove(0);
       s.concat("build: ");
@@ -241,9 +247,11 @@ class App {
       oledWrapper->startup();
       config.dump();
       Utils::publish("setup() : finished.");
-      oledWrapper->test();
-      Utils::publish("Waiting for '.'");
-      while (Utils::waitForSerial(".")) {}
+      if (Utils::debug) {
+        oledWrapper->test();
+        Utils::publish("Waiting for '.'");
+        while (Utils::waitForSerial(".")) {}
+      } 
     }
     void loop() {
       display_on_oled();
