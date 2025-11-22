@@ -91,6 +91,33 @@ class OLEDWrapper {
         endDisplay();
       }
     }
+    void test3() {
+      unsigned long start = millis();
+      startDisplay(u8g2_font_fur11_tf);
+      for (int y = 0; y < getHeight(); y++) {
+        u8g2.drawPixel(0, y);
+        endDisplay();
+      }
+      unsigned long duration = millis() - start;
+      Utils::publish("test3() duration: " + String(duration) + " ms");
+    }
+    void test4() {
+      unsigned long start = millis();
+      for (int y = 0; y < getHeight(); y++) {
+        startDisplay(u8g2_font_fur11_tf);
+        u8g2.drawPixel(0, y);
+        endDisplay();
+      }
+      unsigned long duration = millis() - start;
+      Utils::publish("test4() duration: " + String(duration) + " ms");
+    }
+    void test() {
+      test3();
+      test4();
+/*  test3() duration: 36840 ms
+    test4() duration: 36868 ms
+*/
+    }
     int getHeight() {
       return 96; // ??? why does u8g2.getHeight() return 128 ???
     }
@@ -191,8 +218,7 @@ class Config {
       s.concat(String(oledWrapper->getHeight()));
       Utils::publish(s);
       s.remove(0);
-      s.concat("build: ");
-      s.concat("~ Fri Nov 21 04:52:21 PM PST 2025");
+      s.concat("build: ~ Fri Nov 21 08:16:23 PM PST 2025");
       Utils::publish(s);
       s.remove(0);
       s.concat("THRESHOLD: ");
@@ -254,12 +280,12 @@ class App {
       Utils::publish("setup() : started.");
       oledWrapper->startup();
       config.dump();
-      Utils::publish("setup() : finished.");
       if (Utils::debug) {
-        oledWrapper->test2();
+        oledWrapper->test();
         Utils::publish("Waiting for '.'");
         while (Utils::waitForSerial(".")) {}
       } 
+      Utils::publish("setup() : finished.");
     }
     void loop() {
       display_on_oled();
