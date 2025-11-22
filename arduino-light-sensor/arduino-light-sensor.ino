@@ -75,10 +75,18 @@ class OLEDWrapper {
       display(s, 0, 16);
       endDisplay();
     }
-    void test() {
+    void test1() {
       for (u8g2_uint_t h = u8g2.getHeight(); h > 95; h -= 1) {
         startDisplay(u8g2_font_fur11_tf);
         u8g2.drawFrame(0, 0, getWidth(), h);
+        u8g2.drawUTF8(8, 32, String(h).c_str());
+        endDisplay();
+      }
+    }
+    void test2() {
+      for (int h = 8; h > -8; h -= 1) {
+        startDisplay(u8g2_font_fur11_tf);
+        u8g2.drawLine(0, h, getWidth(), h);
         u8g2.drawUTF8(8, 32, String(h).c_str());
         endDisplay();
       }
@@ -248,7 +256,7 @@ class App {
       config.dump();
       Utils::publish("setup() : finished.");
       if (Utils::debug) {
-        oledWrapper->test();
+        oledWrapper->test2();
         Utils::publish("Waiting for '.'");
         while (Utils::waitForSerial(".")) {}
       } 
