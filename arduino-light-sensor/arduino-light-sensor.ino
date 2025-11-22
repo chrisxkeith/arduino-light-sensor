@@ -13,6 +13,8 @@ class Utils {
       }
       Serial.println(s);
     }
+    static void checkSerial();
+    static bool waitForSerial(String s);
 };
 unsigned long Utils::lastPrintln = 0;
 bool Utils::debug = false;
@@ -72,6 +74,14 @@ class OLEDWrapper {
       startDisplay(u8g2_font_fur11_tf);
       display(s, 0, 16);
       endDisplay();
+    }
+    void frame(u8g2_uint_t x, u8g2_uint_t y, u8g2_uint_t w, u8g2_uint_t h) {
+      startDisplay(u8g2_font_fur11_tf);
+      u8g2.drawFrame(x, y, w, h);
+      endDisplay();
+    }
+    void test() {
+      frame(0, 0, u8g2.getWidth(), u8g2.getHeight());
     }
 };
 OLEDWrapper* oledWrapper = new OLEDWrapper();
@@ -229,18 +239,44 @@ class App {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
       oledWrapper->startup();
-      oledWrapper->display(2, 30, "setup started");
-      delay(3000);
       config.dump();
-      oledWrapper->display(2, 30, "setup finished");
-      delay(3000);
       Utils::publish("setup() : finished.");
+      oledWrapper->test();
+      Utils::publish("Waiting for '.'");
+      while (Utils::waitForSerial(".")) {}
     }
     void loop() {
       display_on_oled();
+      Utils::checkSerial();
     }
 };
 App app;
+
+void Utils::checkSerial() {
+  if (Serial.available() > 0) {
+    String command = Serial.readString();
+    command.trim();
+    if (command.equals("?")) {
+      config.dump();
+    } else if (command.equals("debug on")) {
+      Utils::debug = true;
+      Utils::publish("Debugging enabled.");
+    } else if (command.equals("debug off")) {
+      Utils::debug = false;
+      Utils::publish("Debugging disabled.");
+    } else {
+      Utils::publish("Unknown command: " + command);  
+    }
+  }
+}
+bool Utils::waitForSerial(String s) {
+  if (Serial.available() > 0) {
+    String command = Serial.readString();
+    command.trim();
+    return (!command.equals(s));
+  }
+  return true;
+}
 
 void setup() {
   app.setup();
