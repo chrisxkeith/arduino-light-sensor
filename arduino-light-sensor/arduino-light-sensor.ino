@@ -15,6 +15,14 @@ class Utils {
     }
     static void checkSerial();
     static bool waitForSerial(String s);
+    static String getMinSecString(unsigned long ms) {
+      unsigned long seconds = (ms / 1000) % 60;
+      unsigned long minutes = (ms / 1000 / 60) % 60;
+      char s[32];
+      sprintf(s, "%02u:%02u", minutes, seconds);
+      String elapsed(s);
+      return elapsed;
+    }
 };
 unsigned long Utils::lastPrintln = 0;
 bool Utils::debug = false;
@@ -168,6 +176,7 @@ class Sensor {
   public:
     const int THRESHOLD = 15;
     bool on = false;
+    bool publish = true;
 
     Sensor(int pin, String name) {
       this->pin = pin;
@@ -188,8 +197,9 @@ class Sensor {
       total = 0.0;
     }
     void publishData() {
-      if (millis() > lastPublish + 2000) {
-        String s("Sensor value: ");
+      if (publish && (millis() > lastPublish + 2000)) {
+        String s(Utils::getMinSecString(millis()));
+        s.concat(" Sensor_value: ");
         s.concat(getValue());
         Utils::publish(s);
         lastPublish = millis();
@@ -272,7 +282,6 @@ class App {
         lightSensor1.clear();
       }
     }
-
   public:
     void setup() {
       Serial.begin(115200);
@@ -281,17 +290,17 @@ class App {
       oledWrapper->display(config.build);
       delay(3000);
       config.dump();
-      if (Utils::debug) {
-        oledWrapper->test();
-        Utils::publish("Waiting for '.'");
-        while (Utils::waitForSerial(".")) {}
-      } 
       Utils::publish("setup() : finished.");
     }
     void loop() {
       display_on_oled();
       Utils::checkSerial();
     }
+    void test() {
+      oledWrapper->test();
+      Utils::publish("Waiting for '.'");
+      while (Utils::waitForSerial(".")) {}
+    } 
 };
 App app;
 
@@ -307,6 +316,12 @@ void Utils::checkSerial() {
     } else if (command.equals("debug off")) {
       Utils::debug = false;
       Utils::publish("Debugging disabled.");
+     } else if (command.equals("publish on")) {
+      lightSensor1.publish = true;
+    } else if (command.equals("publish off")) {
+      lightSensor1.publish = false;
+    } else if (command.equals("test")) {
+      app.test();
     } else {
       Utils::publish("Unknown command: " + command);  
     }
