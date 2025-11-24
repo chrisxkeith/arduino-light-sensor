@@ -188,9 +188,6 @@ class Sensor {
       total = 0.0;
     }
     void publishData() {
-      if (Utils::debug == false) {
-        return;
-      }
       if (millis() > lastPublish + 2000) {
         String s("Sensor value: ");
         s.concat(getValue());
@@ -206,6 +203,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
+    const String build = "Fri Nov 21 08:16:23 PM PST 2025";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
@@ -218,7 +216,8 @@ class Config {
       s.concat(String(oledWrapper->getHeight()));
       Utils::publish(s);
       s.remove(0);
-      s.concat("build: ~ Fri Nov 21 08:16:23 PM PST 2025");
+      s.concat("build: ");
+      s.concat(build);
       Utils::publish(s);
       s.remove(0);
       s.concat("THRESHOLD: ");
@@ -279,6 +278,8 @@ class App {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
       oledWrapper->startup();
+      oledWrapper->display(config.build);
+      delay(3000);
       config.dump();
       if (Utils::debug) {
         oledWrapper->test();
