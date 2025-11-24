@@ -83,6 +83,13 @@ class OLEDWrapper {
       display(s, 0, 16);
       endDisplay();
     }
+    void display(String s[], int nStrings) {
+      startDisplay(u8g2_font_fur11_tf);
+      for (int i = 0; i < nStrings; i++) {
+        display(s[i], 0, 16 + (i * 16));
+      }
+      endDisplay();
+    }
     void test1() {
       for (u8g2_uint_t h = u8g2.getHeight(); h > 95; h -= 1) {
         startDisplay(u8g2_font_fur11_tf);
@@ -287,8 +294,7 @@ class App {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
       oledWrapper->startup();
-      oledWrapper->display(config.build);
-      delay(3000);
+      showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
     }
@@ -296,6 +302,12 @@ class App {
       display_on_oled();
       Utils::checkSerial();
     }
+    void showBuild() {
+      oledWrapper->startup();
+      String s[2] = { config.build, config.build.substring(27, 31) };
+      oledWrapper->display(s, 2);
+      delay(3000);
+    } 
     void test() {
       oledWrapper->test();
       Utils::publish("Waiting for '.'");
@@ -322,6 +334,8 @@ void Utils::checkSerial() {
       lightSensor1.publish = false;
     } else if (command.equals("test")) {
       app.test();
+    } else if (command.equals("showBuild")) {
+      app.showBuild();
     } else {
       Utils::publish("Unknown command: " + command);  
     }
