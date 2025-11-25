@@ -49,6 +49,7 @@ class OLEDWrapper {
       u8g2.sendBuffer();
     }
     void clear() {
+      u8g2_prepare();
       u8g2.clearBuffer();
       u8g2.sendBuffer();
     }
@@ -187,7 +188,7 @@ class Sensor {
   public:
     const int THRESHOLD = 15;
     bool on = false;
-    bool publish = true;
+    bool publish = false;
 
     Sensor(int pin, String name) {
       this->pin = pin;
@@ -311,6 +312,7 @@ class App {
       String s[2] = { config.build, config.build.substring(27, 31) };
       oledWrapper->display(s, 2);
       delay(3000);
+      oledWrapper->clear();
     } 
     void test() {
       oledWrapper->test();
