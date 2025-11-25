@@ -149,8 +149,12 @@ class Spinner {
     int lineWidth = min(middleX, middleY);
     int color = COLOR_WHITE;
     int deg = 0;
+    int incrementDegrees = 1;
 
   public:
+    Spinner(int incrementDegrees) {
+      this->incrementDegrees = incrementDegrees;
+    }
     void display() {
       int xEnd = lineWidth * cos(deg * M_PI / 180.0);
       int yEnd = lineWidth * sin(deg * M_PI / 180.0);
@@ -159,7 +163,7 @@ class Spinner {
       u8g2.setDrawColor(color);
       u8g2.drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
       u8g2.sendBuffer();
-      deg++;
+      deg += incrementDegrees;
       if (deg >= 360) {
         deg = 0;
         if (color == COLOR_WHITE) {
@@ -170,7 +174,7 @@ class Spinner {
       }
     }
 };
-Spinner spinner;
+Spinner spinner(5);
 
 class Sensor {
   private:
@@ -220,7 +224,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "Fri Nov 21 08:16:23 PM PST 2025";
+    const String build = "Tue Nov 25 07:33:00 AM PST 2025";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
