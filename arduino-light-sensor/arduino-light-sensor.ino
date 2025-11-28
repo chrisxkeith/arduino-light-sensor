@@ -190,6 +190,11 @@ class Sensor {
     bool on = false;
     bool publish = false;
 
+    bool      testing = false;
+    int       testValue = -1;
+    int       lastTestSpinnerMillis = millis();
+    const int TEST_SPINNER_DURATION_MS = 3000;
+
     Sensor(int pin, String name) {
       this->pin = pin;
       this->name = name;
@@ -218,14 +223,25 @@ class Sensor {
       }
     }
     int getValue() {
-        return round(total / nSamples);
+      if (testing) {
+        if (millis() > lastTestSpinnerMillis + TEST_SPINNER_DURATION_MS) {
+          if (testValue < THRESHOLD) {
+            testValue = THRESHOLD + 10;
+          } else {
+            testValue = THRESHOLD - 10;  
+          }
+          lastTestSpinnerMillis = millis();
+        }
+        return testValue;
+      }
+      return round(total / nSamples);
     }
 };
 Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "Tue Nov 25 07:33:00 AM PST 2025";
+    const String build = "Thu Nov 27 05:35:00 PM PST 2025";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
@@ -319,6 +335,9 @@ class App {
       Utils::publish("Waiting for '.'");
       while (Utils::waitForSerial(".")) {}
     } 
+    void testSpinner() {
+      lightSensor1.testing = true;
+    } 
 };
 App app;
 
@@ -342,8 +361,11 @@ void Utils::checkSerial() {
       app.test();
     } else if (command.equals("showBuild")) {
       app.showBuild();
+    } else if (command.equals("testSpinner")) {
+      app.testSpinner();
     } else {
-      Utils::publish("Unknown command: " + command);  
+      Utils::publish("Unknown command: " + command);
+      config.dump(); 
     }
   }
 }
