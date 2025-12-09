@@ -156,6 +156,10 @@ class Spinner {
     Spinner(int incrementDegrees) {
       this->incrementDegrees = incrementDegrees;
     }
+    void reset() {
+      deg = 0;
+      color = COLOR_WHITE;
+    }
     void display() {
       int xEnd = lineWidth * cos(deg * M_PI / 180.0);
       int yEnd = lineWidth * sin(deg * M_PI / 180.0);
@@ -241,7 +245,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "Thu Nov 27 05:35:00 PM PST 2025";
+    const String build = "Mon Dec  8 05:13:33 PM PST 2025";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
@@ -299,6 +303,7 @@ class App {
           lightSensor1.on = !lightSensor1.on;
           oledWrapper->clear();
           if (lightSensor1.on) {
+            spinner.reset();
             spinner.display();
           }
         } else {
