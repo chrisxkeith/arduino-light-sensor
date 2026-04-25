@@ -245,7 +245,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "Mon Dec  8 05:13:33 PM PST 2025";
+    const String build = "Sat Apr 25 01:10:52 PM PDT 2026";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
@@ -329,7 +329,7 @@ class App {
       Utils::checkSerial();
     }
     void showBuild() {
-      oledWrapper->startup();
+      oledWrapper->clear();
       String s[2] = { config.build, config.build.substring(27, 31) };
       oledWrapper->display(s, 2);
       delay(3000);
