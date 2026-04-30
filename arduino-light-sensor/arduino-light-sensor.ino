@@ -269,6 +269,8 @@ class Config {
 };
 Config config;
 
+// #include "wifinina.cpp"
+
 class App {
   private:
     bool gatheringData = false;
@@ -323,9 +325,11 @@ class App {
       showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
+//      server_setup();
     }
     void loop() {
       display_on_oled();
+//      server_loop();
       Utils::checkSerial();
     }
     void showBuild() {
