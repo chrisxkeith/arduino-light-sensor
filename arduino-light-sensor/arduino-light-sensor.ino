@@ -64,8 +64,12 @@ class OLEDWrapper {
       pinMode(9, OUTPUT);
       digitalWrite(10, 0);
       digitalWrite(9, 0);
-      u8g2.begin();
-      u8g2.setBusClock(400000);
+      if (!u8g2.begin()) {
+        Utils::publish("u8g2.begin() failed!");
+      } else {
+        Utils::publish("u8g2.begin() succeeded!");
+        u8g2.setBusClock(400000);
+      }
     }
     void startDisplay(const uint8_t *font) {
       u8g2_prepare();
@@ -141,7 +145,7 @@ class OLEDWrapper {
       return u8g2.getWidth();
     }
 };
-OLEDWrapper* oledWrapper = new OLEDWrapper();
+OLEDWrapper* oledWrapper = nullptr;
 
 class Spinner {
   private:
@@ -321,6 +325,7 @@ class App {
     void setup() {
       Serial.begin(115200);
       Utils::publish("setup() : started.");
+      oledWrapper = new OLEDWrapper();
       oledWrapper->startup();
       showBuild();
       config.dump();
