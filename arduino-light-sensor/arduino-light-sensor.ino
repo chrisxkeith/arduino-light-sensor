@@ -273,8 +273,6 @@ class Config {
 };
 Config config;
 
-// #include "wifinina.cpp"
-
 class App {
   private:
     bool gatheringData = false;
