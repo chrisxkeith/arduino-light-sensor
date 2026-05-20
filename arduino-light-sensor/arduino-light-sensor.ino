@@ -27,6 +27,8 @@ class Utils {
 unsigned long Utils::lastPrintln = 0;
 bool Utils::debug = false;
 
+#define USE_ZIO
+#ifdef USE_ZIO
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 const int COLOR_WHITE = 1;
 const int COLOR_BLACK = 0;
@@ -95,6 +97,12 @@ class OLEDWrapper {
       }
       endDisplay();
     }
+    void setDrawColor(int color) {
+      u8g2.setDrawColor(color);
+    }
+    void drawLine(int x0, int y0, int x1, int y1) {
+      u8g2.drawLine(x0, y0, x1, y1);
+    }
     void test1() {
       for (u8g2_uint_t h = u8g2.getHeight(); h > 95; h -= 1) {
         startDisplay(u8g2_font_fur11_tf);
@@ -145,6 +153,58 @@ class OLEDWrapper {
       return u8g2.getWidth();
     }
 };
+#else
+#include "Arduino_GigaDisplay_GFX.h"
+const int COLOR_WHITE = 0x65535;
+const int COLOR_BLACK = 0x0;
+
+GigaDisplay_GFX display_;
+
+class OLEDWrapper {
+  private:
+    uint16_t currentColor = COLOR_WHITE;
+  public:
+    void u8g2_prepare(void) {
+    }
+    void display(int x, int y, String s) {
+    }
+    void clear() {
+    }
+    void startup() {
+      delay(3000);
+      display_.begin(); //init library
+    }
+    void startDisplay(const uint8_t *font) {
+      display_.fillScreen(COLOR_BLACK);
+    }
+    void display(String s, uint8_t x, uint8_t y) {
+    }
+    void endDisplay() {
+    }
+    void display(String s) {
+    }
+    void display(String s[], int nStrings) {
+    }
+    void setDrawColor(int color) {
+      currentColor = color;
+    }
+    void drawLine(int x0, int y0, int x1, int y1) {
+      display_.drawLine( x0, y0, x1, y1, currentColor);
+    }
+    void test1() {
+      display_.setCursor(10,10); //x,y
+      display_.setTextSize(5); //adjust text size
+      display_.print("Hello World!"); //print
+    }
+    int getHeight() {
+      return 480;
+    }
+    int getWidth() {
+      return 800;
+    }
+};
+#endif
+
 OLEDWrapper* oledWrapper = nullptr;
 
 class Spinner {
@@ -168,10 +228,10 @@ class Spinner {
       int xEnd = lineWidth * cos(deg * M_PI / 180.0);
       int yEnd = lineWidth * sin(deg * M_PI / 180.0);
 
-      oledWrapper->u8g2_prepare();
-      u8g2.setDrawColor(color);
-      u8g2.drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
-      u8g2.sendBuffer();
+      oledWrapper->startDisplay(0);
+      oledWrapper->setDrawColor(color);
+      oledWrapper->drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
+      oledWrapper->endDisplay();
       deg += incrementDegrees;
       if (deg >= 360) {
         deg = 0;
@@ -343,8 +403,8 @@ class App {
       oledWrapper->clear();
     } 
     void test() {
-      oledWrapper->test();
-      Utils::publish("Waiting for '.'");
+      oledWrapper->test1();
+      Utils::publish("After test(), waiting for '.'");
       while (Utils::waitForSerial(".")) {}
     } 
     void testSpinner() {
@@ -357,6 +417,9 @@ void Utils::checkSerial() {
   if (Serial.available() > 0) {
     String command = Serial.readString();
     command.trim();
+    String s("About to run: ");
+    s.concat(command);
+    Utils::publish(s);
     if (command.equals("?")) {
       config.dump();
     } else if (command.equals("debug on")) {
