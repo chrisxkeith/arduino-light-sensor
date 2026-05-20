@@ -27,7 +27,7 @@ class Utils {
 unsigned long Utils::lastPrintln = 0;
 bool Utils::debug = false;
 
-#define USE_ZIO
+// #define USE_ZIO
 #ifdef USE_ZIO
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 const int COLOR_WHITE = 1;
@@ -169,13 +169,13 @@ class OLEDWrapper {
     void display(int x, int y, String s) {
     }
     void clear() {
+      display_.fillScreen(COLOR_BLACK);
     }
     void startup() {
       delay(3000);
       display_.begin(); //init library
     }
     void startDisplay(const uint8_t *font) {
-      display_.fillScreen(COLOR_BLACK);
     }
     void display(String s, uint8_t x, uint8_t y) {
     }
@@ -189,7 +189,7 @@ class OLEDWrapper {
       currentColor = color;
     }
     void drawLine(int x0, int y0, int x1, int y1) {
-      display_.drawLine( x0, y0, x1, y1, currentColor);
+      display_.drawLine(x0, y0, x1, y1, currentColor);
     }
     void test1() {
       display_.setCursor(10,10); //x,y
@@ -197,10 +197,10 @@ class OLEDWrapper {
       display_.print("Hello World!"); //print
     }
     int getHeight() {
-      return 480;
+      return 800;
     }
     int getWidth() {
-      return 800;
+      return 480;
     }
 };
 #endif
@@ -211,10 +211,12 @@ class Spinner {
   private:
     int middleX = oledWrapper->getWidth() / 2;
     int middleY = oledWrapper->getHeight() / 2;
-    int lineWidth = min(middleX, middleY);
+    int lineLength = min(middleX, middleY);
     int color = COLOR_WHITE;
     int deg = 0;
     int incrementDegrees = 1;
+    unsigned long lastDisplayTime = 0;
+    const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
 
   public:
     Spinner(int incrementDegrees) {
@@ -225,8 +227,11 @@ class Spinner {
       color = COLOR_WHITE;
     }
     void display() {
-      int xEnd = lineWidth * cos(deg * M_PI / 180.0);
-      int yEnd = lineWidth * sin(deg * M_PI / 180.0);
+      if (millis() - lastDisplayTime < DISPLAY_INTERVAL) {
+        return;
+      }
+      int xEnd = lineLength * cos(deg * M_PI / 180.0);
+      int yEnd = lineLength * sin(deg * M_PI / 180.0);
 
       oledWrapper->startDisplay(0);
       oledWrapper->setDrawColor(color);
@@ -241,6 +246,21 @@ class Spinner {
           color = COLOR_WHITE;
         }
       }
+      lastDisplayTime = millis();
+    }
+    void dump() {
+      Utils::publish("Spinner");
+      String s("middleX: ");
+      s.concat(middleX);
+      Utils::publish(s);
+      s.remove(0);
+      s.concat("middleY: ");
+      s.concat(middleY);
+      Utils::publish(s);
+      s.remove(0);
+      s.concat("lineLength: ");
+      s.concat(lineLength);
+      Utils::publish(s);
     }
 };
 Spinner spinner(5);
@@ -438,6 +458,8 @@ void Utils::checkSerial() {
       app.showBuild();
     } else if (command.equals("testSpinner")) {
       app.testSpinner();
+    } else if (command.equals("dumpSpinner")) {
+      spinner.dump();
     } else {
       Utils::publish("Unknown command: " + command);
       config.dump(); 
