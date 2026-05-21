@@ -1,6 +1,4 @@
 
-#include <U8g2lib.h>
-
 class Utils {
   private:
     static unsigned long lastPrintln;
@@ -29,6 +27,8 @@ bool Utils::debug = false;
 
 // #define USE_ZIO
 #ifdef USE_ZIO
+#include <U8g2lib.h>
+
 U8G2_SSD1327_EA_W128128_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 const int COLOR_WHITE = 1;
 const int COLOR_BLACK = 0;

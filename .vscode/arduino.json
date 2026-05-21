@@ -1,5 +1,6 @@
 {
-    "board": "arduino:samd:nano_33_iot",
+    "board": "arduino:mbed_giga:giga",
     "sketch": "arduino-light-sensor/arduino-light-sensor.ino",
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyUSB0",
+    "configuration": "target_core=cm7,split=100_0,security=none"
 }
