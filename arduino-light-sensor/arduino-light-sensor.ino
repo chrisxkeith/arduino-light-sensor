@@ -1,4 +1,3 @@
-
 class Utils {
   private:
     static unsigned long lastPrintln;
@@ -13,13 +12,15 @@ class Utils {
     }
     static void checkSerial();
     static bool waitForSerial(String s);
-    static String getMinSecString(unsigned long ms) {
-      unsigned long seconds = (ms / 1000) % 60;
-      unsigned long minutes = (ms / 1000 / 60) % 60;
-      char s[32];
-      sprintf(s, "%02u:%02u", minutes, seconds);
-      String elapsed(s);
-      return elapsed;
+    static String msToString(unsigned long ms) {
+      int totalSeconds = ms / 1000;
+      int secs = totalSeconds % 60;
+      int minutes = (totalSeconds / 60) % 60;
+      int hours = (totalSeconds / 60) / 60;
+    
+      char buf[100];
+      sprintf(buf, "%02u:%02u:%02u", hours, minutes, secs);
+      return String(buf);
     }
 };
 unsigned long Utils::lastPrintln = 0;
@@ -28,6 +29,7 @@ bool Utils::debug = false;
 #include "Arduino_GigaDisplay_GFX.h"
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
+const int COLOR_RED = 0xF800;
 
 GigaDisplay_GFX display_;
 
@@ -65,11 +67,21 @@ class OLEDWrapper {
       // Rotate not happening automatically?
       display_.drawLine(y0, x0, y1, x1, currentColor);
     }
+    void fillRect(int x0, int y0, int x1, int y1, int color) {
+      display_.fillRect(x0, y0, x1 - x0, y1 - y0, color);
+    }  
     int getHeight() {
       return display_.height();
     }
     int getWidth() {
       return display_.width();
+    }
+    void dump() {
+      String s("OLEDWrapper: getHeight(): ");
+      s.concat(getHeight());
+      s.concat(", getWidth(): ");
+      s.concat(getWidth());
+      Utils::publish(s);
     }
 };
 OLEDWrapper* oledWrapper = nullptr;
@@ -81,9 +93,28 @@ class Spinner {
     int lineLength = min(middleX, middleY);
     int color = COLOR_WHITE;
     int deg = 0;
+    unsigned long msWhenOn = 0;
+    unsigned long baseline = 0;
+    unsigned long lastShift = 0;
     int incrementDegrees = 1;
     unsigned long lastDisplayTime = 0;
     const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
+
+    void drawElapsed() {
+      unsigned long elapsed = millis() - msWhenOn;
+      String s = Utils::msToString(elapsed);
+      oledWrapper->fillRect(0, 0, 100, oledWrapper->getWidth(), COLOR_BLACK);
+      oledWrapper->display(s, 2, 0, baseline);
+      if (millis() - lastShift > 1000 * 10) {
+        baseline += 20;
+        if (baseline > oledWrapper->getWidth() - 20) {
+          oledWrapper->dump();
+          dump();
+          baseline = 0;
+        }
+        lastShift = millis();
+      }
+    }
 
   public:
     Spinner(int incrementDegrees) {
@@ -92,6 +123,7 @@ class Spinner {
     void reset() {
       deg = 0;
       color = COLOR_WHITE;
+      msWhenOn = millis();
     }
     void display() {
       if (millis() - lastDisplayTime < DISPLAY_INTERVAL) {
@@ -102,6 +134,7 @@ class Spinner {
 
       oledWrapper->setDrawColor(color);
       oledWrapper->drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
+      drawElapsed();
       deg += incrementDegrees;
       if (deg >= 360) {
         deg = 0;
@@ -114,17 +147,14 @@ class Spinner {
       lastDisplayTime = millis();
     }
     void dump() {
-      Utils::publish("Spinner");
-      String s("middleX: ");
+      String s("Spinner: middleX: ");
       s.concat(middleX);
-      Utils::publish(s);
-      s.remove(0);
-      s.concat("middleY: ");
+      s.concat(", middleY: ");
       s.concat(middleY);
-      Utils::publish(s);
-      s.remove(0);
-      s.concat("lineLength: ");
+      s.concat(", lineLength: ");
       s.concat(lineLength);
+      s.concat(", baseline: ");
+      s.concat(baseline);
       Utils::publish(s);
     }
 };
@@ -168,7 +198,7 @@ class Sensor {
     }
     void publishData() {
       if (publish && (millis() > lastPublish + 2000)) {
-        String s(Utils::getMinSecString(millis()));
+        String s(Utils::msToString(millis()));
         s.concat(" Sensor_value: ");
         s.concat(getValue());
         Utils::publish(s);
@@ -198,14 +228,8 @@ class Config {
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
-      s.remove(0);
-      s.concat("oledWrapper->getWidth(): ");
-      s.concat(String(oledWrapper->getWidth()));
-      Utils::publish(s);
-      s.remove(0);
-      s.concat("oledWrapper->getHeight(): ");
-      s.concat(String(oledWrapper->getHeight()));
-      Utils::publish(s);
+      oledWrapper->dump();
+      spinner.dump();
       s.remove(0);
       s.concat("build: ");
       s.concat(build);
@@ -220,49 +244,23 @@ Config config;
 
 class App {
   private:
-    bool gatheringData = false;
-    void gatherValues() {
-      int totalSeconds = 10;
-      int total = 0;
-      for (int i = 0; i < totalSeconds; i++) {
-        lightSensor1.sample();
-        int value = lightSensor1.getValue();
-        oledWrapper->display(String(totalSeconds - i));
-        Utils::publish(String(value)); 
-        delay(1000);
-        total += value;
-        lightSensor1.clear();
-      }
-      int avg = total / totalSeconds;
-      String avgStr("Average: ");
-      avgStr.concat(avg);
-      Utils::publish(avgStr);
-      oledWrapper->display(String(avg));
-      delay(5000);
-    }
     void display_on_oled() {
-      if (gatheringData) {
-        gatherValues();
-        gatherValues();
-        gatheringData = false;
-      } else {
-        lightSensor1.sample();
-        int value = lightSensor1.getValue();
-        if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
-          lightSensor1.on = !lightSensor1.on;
-          oledWrapper->clear();
-          if (lightSensor1.on) {
-            spinner.reset();
-            spinner.display();
-          }
-        } else {
-          if (lightSensor1.on) {
-            spinner.display();
-          }
+      lightSensor1.sample();
+      int value = lightSensor1.getValue();
+      if ((value > lightSensor1.THRESHOLD) != lightSensor1.on) {
+        lightSensor1.on = !lightSensor1.on;
+        oledWrapper->clear();
+        if (lightSensor1.on) {
+          spinner.reset();
+          spinner.display();
         }
-        lightSensor1.publishData();
-        lightSensor1.clear();
+      } else {
+        if (lightSensor1.on) {
+          spinner.display();
+        }
       }
+      lightSensor1.publishData();
+      lightSensor1.clear();
     }
   public:
     void setup() {
@@ -273,11 +271,9 @@ class App {
       showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
-//      server_setup();
     }
     void loop() {
       display_on_oled();
-//      server_loop();
       Utils::checkSerial();
     }
     void showBuild() {
@@ -318,6 +314,8 @@ void Utils::checkSerial() {
       app.testSpinner();
     } else if (command.equals("dumpSpinner")) {
       spinner.dump();
+    } else if (command.equals("dumpOled")) {
+      oledWrapper->dump();
     } else {
       Utils::publish("Unknown command: " + command);
       config.dump(); 
