@@ -48,9 +48,9 @@ class OLEDWrapper {
       display_.setRotation(1);
     }
     void display(String s, int textSize, uint8_t x, uint8_t y) {
-      display_.setCursor(x,y); //x,y
-      display_.setTextSize(textSize); //adjust text size
-      display_.print(s); //print
+      display_.setCursor(x, y);
+      display_.setTextSize(textSize);
+      display_.print(s);
     }
     void display(String s) {
       display(s, DEFAULT_FONT_SIZE, 10, 10);
@@ -83,6 +83,70 @@ class OLEDWrapper {
       s.concat(getWidth());
       Utils::publish(s);
     }
+    void test1() {
+      clear();
+      for (int r = 0; r < 2; r++) {
+        display_.setRotation(r);
+        String s("r: ");
+        s.concat(r);
+        s.concat(" w: ");
+        s.concat(getWidth());
+        s.concat(" h: ");
+        s.concat(getHeight());
+        display(s, 3, 0, 0);
+        if (r == 0) {
+          display_.drawLine(0, 0, getWidth(), getHeight(), COLOR_WHITE);
+        } else {
+          display_.drawLine(0, 0, getWidth(), getHeight(), COLOR_RED);
+        }
+      }
+    }
+    void test2() {
+      for (int r = 0; r < 4; r++) {
+        clear();
+        display_.setRotation(r);
+        for (int i = 0; i < 24; i++) {
+          int x = 0;
+          int y = i * 20;
+          String s(i);
+          s.concat(",");
+          s.concat(x);
+          s.concat(",");
+          s.concat(y);
+          s.concat(",");
+          s.concat(getWidth());
+          s.concat(",");
+          s.concat(getHeight());
+          display(s, 2, x, y);
+          Utils::publish(s);
+          delay(1000);
+        }
+        delay(5000);
+      }
+    }
+    void test3() {
+      clear();
+      for (int i = 0; i < 24; i++) {
+        int x = 0;
+        int y = i * 20;
+        if (y - 20 > getHeight()) {
+          x = getWidth() / 2;
+          y -= getHeight();
+        }
+        String s(i);
+        s.concat(",");
+        s.concat(x);
+        s.concat(",");
+        s.concat(y);
+        s.concat(",");
+        s.concat(getWidth());
+        s.concat(",");
+        s.concat(getHeight());
+        display(s, 2, x, y);
+        Utils::publish(s);
+        delay(1000);
+      }
+    }
 };
 OLEDWrapper* oledWrapper = nullptr;
 
@@ -103,13 +167,11 @@ class Spinner {
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-      oledWrapper->fillRect(0, 0, 100, oledWrapper->getWidth(), COLOR_BLACK);
+      oledWrapper->fillRect(0, 0, 100, oledWrapper->getHeight(), COLOR_BLACK);
       oledWrapper->display(s, 2, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
         baseline += 20;
-        if (baseline > oledWrapper->getWidth() - 20) {
-          oledWrapper->dump();
-          dump();
+        if (baseline > oledWrapper->getHeight() - 20) {
           baseline = 0;
         }
         lastShift = millis();
@@ -268,8 +330,9 @@ class App {
       Utils::publish("setup() : started.");
       oledWrapper = new OLEDWrapper();
       oledWrapper->startup();
-      showBuild();
+      // showBuild();
       config.dump();
+      oledWrapper->test2();
       Utils::publish("setup() : finished.");
     }
     void loop() {
@@ -336,5 +399,5 @@ void setup() {
 }
 
 void loop() {
-  app.loop();
+//   app.loop();
 }
