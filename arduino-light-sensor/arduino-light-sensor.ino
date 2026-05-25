@@ -124,29 +124,6 @@ class OLEDWrapper {
         delay(5000);
       }
     }
-    void test3() {
-      clear();
-      for (int i = 0; i < 24; i++) {
-        int x = 0;
-        int y = i * 20;
-        if (y - 20 > getHeight()) {
-          x = getWidth() / 2;
-          y -= getHeight();
-        }
-        String s(i);
-        s.concat(",");
-        s.concat(x);
-        s.concat(",");
-        s.concat(y);
-        s.concat(",");
-        s.concat(getWidth());
-        s.concat(",");
-        s.concat(getHeight());
-        display(s, 2, x, y);
-        Utils::publish(s);
-        delay(1000);
-      }
-    }
 };
 OLEDWrapper* oledWrapper = nullptr;
 
@@ -330,9 +307,8 @@ class App {
       Utils::publish("setup() : started.");
       oledWrapper = new OLEDWrapper();
       oledWrapper->startup();
-      // showBuild();
+      showBuild();
       config.dump();
-      oledWrapper->test2();
       Utils::publish("setup() : finished.");
     }
     void loop() {
@@ -399,5 +375,5 @@ void setup() {
 }
 
 void loop() {
-//   app.loop();
+   app.loop();
 }
