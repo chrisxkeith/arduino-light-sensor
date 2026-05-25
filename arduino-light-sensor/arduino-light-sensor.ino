@@ -144,10 +144,10 @@ class Spinner {
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-      oledWrapper->fillRect(0, 0, 100, oledWrapper->getHeight(), COLOR_BLACK);
-      oledWrapper->display(s, 2, 0, baseline);
+      oledWrapper->fillRect(0, 0, 145, oledWrapper->getHeight(), COLOR_BLACK);
+      oledWrapper->display(s, 3, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
-        baseline += 20;
+        baseline += 3;
         if (baseline > oledWrapper->getHeight() - 20) {
           baseline = 0;
         }
