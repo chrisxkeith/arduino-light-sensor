@@ -129,10 +129,7 @@ class OLEDWrapper {
     void handleTimer() {
     }
 };
-#endif
-
-// #define USE_LVGL
-#ifdef USE_LVGL
+#else
 #include "Arduino_H7_Video.h"
 
 #include "lvgl.h"
@@ -147,7 +144,7 @@ class OLEDWrapper {
     lv_obj_t*   gridCell = nullptr;
     lv_obj_t*   screen = nullptr;
     const int   DEFAULT_FONT_SIZE = 24;
-    lv_style_t    black;
+    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
     lv_style_t    white;
     int         currentColor;
   public:
@@ -267,27 +264,6 @@ class Spinner {
         }
         lastShift = millis();
       }
-    }
-// Function to create radial lines centered at (200, 200) with length 200
-    std::vector<std::tuple<int, int, int, int>> createRadialLines(int numLines) {
-      std::vector<std::tuple<int, int, int, int>> lines;
-      
-      const int centerX = 200;
-      const int centerY = 200;
-      const int radius = 200;
-      
-      for (int i = 0; i < numLines; i++) {
-          // Calculate angle for this line (in radians)
-          double angle = (2.0 * M_PI * i) / numLines;
-          
-          // Calculate end point using trigonometry
-          int x1 = centerX + (int)(radius * cos(angle));
-          int y1 = centerY + (int)(radius * sin(angle));
-          
-          // Store as (x0, y0, x1, y1) tuple
-          lines.push_back(std::make_tuple(centerX, centerY, x1, y1));
-      }      
-      return lines;
     }
   public:
     Spinner(int incrementDegrees) {
