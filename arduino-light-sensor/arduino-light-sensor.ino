@@ -144,19 +144,14 @@ class OLEDWrapper {
     lv_obj_t*   gridCell = nullptr;
     lv_obj_t*   screen = nullptr;
     const int   DEFAULT_FONT_SIZE = 24;
-    lv_style_t    white;
     int         currentColor;
   public:
-    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
-
     void startup() {
       delay(3000);
       Display.begin();
       screen = lv_obj_create(lv_scr_act());
       lv_obj_set_size(screen, Display.width(), Display.height());
       setupGrid();
-      setupLineStyle(&black, 2, lv_color_black());
-      setupLineStyle(&white, 4, lv_color_white());
     }
     void displayOff() {
       pinMode(74, OUTPUT);
@@ -212,12 +207,6 @@ class OLEDWrapper {
       lv_obj_center(line1);
     }
     void drawLine(int x0, int y0, int x1, int y1) {
-      static lv_point_precise_t line_points[] = { {x0, y0}, {x1, y1} };
-      if (currentColor == COLOR_BLACK) {
-        drawLines(line_points, 2, &black);
-      } else {
-        drawLines(line_points, 2, &white);
-      }
     }
     void handleTimer() {
       lv_timer_handler();
@@ -272,7 +261,7 @@ class Spinner {
       color = COLOR_WHITE;
       msWhenOn = millis();
     }
-    void drawSpoke(int color, int startX, int startY, int endX, int endY) {
+    virtual void drawSpoke(int color, int startX, int startY, int endX, int endY) {
       oledWrapper->setDrawColor(color);
       oledWrapper->drawLine(startX, startY, endX, endY);
     }
@@ -306,6 +295,7 @@ class Spinner {
       s.concat(baseline);
       Utils::publish(s);
     }
+    virtual ~Spinner() = default;
 };
 #ifdef USE_GFX
 Spinner spinner(5);
@@ -317,12 +307,16 @@ class LvglSpinner : public Spinner {
   public:
     LvglSpinner(int incrementDegrees) : Spinner(incrementDegrees) {
     }
-    void drawSpoke(int color, int startX, int startY, int endX, int endY) {
+    void drawSpoke(int color, int startX, int startY, int endX, int endY) override {
       if (color == COLOR_BLACK) {
-        lv_point_precise_t  line_points[] = { { startX, startY }, { endX, endY } };
+        lv_point_precise_t* line_points = new lv_point_precise_t[2];
+        line_points[0] = { startX, startY };
+        line_points[1] = { endX, endY };
         lv_obj_t*           spoke = lv_line_create(lv_scr_act());
         lv_line_set_points(spoke, line_points, 2);
-        lv_obj_add_style(spoke, &oledWrapper->black, 0);
+        lv_style_t*    black = new lv_style_t();
+        oledWrapper->setupLineStyle(black, 2, lv_color_black());
+        lv_obj_add_style(spoke, black, 0);
         spokes.push_back(spoke);
       } else {
         lv_obj_t* spoke = *spokes.begin();
