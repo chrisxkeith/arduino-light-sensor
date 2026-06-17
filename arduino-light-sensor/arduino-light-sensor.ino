@@ -144,10 +144,11 @@ class OLEDWrapper {
     lv_obj_t*   gridCell = nullptr;
     lv_obj_t*   screen = nullptr;
     const int   DEFAULT_FONT_SIZE = 24;
-    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
     lv_style_t    white;
     int         currentColor;
   public:
+    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
+
     void startup() {
       delay(3000);
       Display.begin();
@@ -235,9 +236,6 @@ class OLEDWrapper {
 
 OLEDWrapper* oledWrapper = nullptr;
 
-#include <vector>
-#include <cmath>
-#include <tuple>
 class Spinner {
   private:
     int middleX = oledWrapper->getWidth() / 2;
@@ -274,15 +272,17 @@ class Spinner {
       color = COLOR_WHITE;
       msWhenOn = millis();
     }
+    void drawSpoke(int color, int startX, int startY, int endX, int endY) {
+      oledWrapper->setDrawColor(color);
+      oledWrapper->drawLine(startX, startY, endX, endY);
+    }
     void display() {
       if (millis() - lastDisplayTime < DISPLAY_INTERVAL) {
         return;
       }
       int xEnd = lineLength * cos(deg * M_PI / 180.0);
       int yEnd = lineLength * sin(deg * M_PI / 180.0);
-
-      oledWrapper->setDrawColor(color);
-      oledWrapper->drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
+      drawSpoke(color, middleX, middleY, middleX + xEnd, middleY + yEnd);
       drawElapsed();
       deg += incrementDegrees;
       if (deg >= 360) {
@@ -307,7 +307,32 @@ class Spinner {
       Utils::publish(s);
     }
 };
+#ifdef USE_GFX
 Spinner spinner(5);
+#else
+#include <vector>
+class LvglSpinner : public Spinner {
+  private:
+    std::vector<lv_obj_t*> spokes;
+  public:
+    LvglSpinner(int incrementDegrees) : Spinner(incrementDegrees) {
+    }
+    void drawSpoke(int color, int startX, int startY, int endX, int endY) {
+      if (color == COLOR_BLACK) {
+        lv_point_precise_t  line_points[] = { { startX, startY }, { endX, endY } };
+        lv_obj_t*           spoke = lv_line_create(lv_scr_act());
+        lv_line_set_points(spoke, line_points, 2);
+        lv_obj_add_style(spoke, &oledWrapper->black, 0);
+        spokes.push_back(spoke);
+      } else {
+        lv_obj_t* spoke = *spokes.begin();
+        spokes.erase(spokes.begin());
+        lv_obj_del(spoke);
+      }
+    }
+};
+LvglSpinner spinner(5);
+#endif
 
 class Sensor {
   private:
