@@ -25,7 +25,7 @@ class Utils {
     static void doDebug(const char* s) {
       if (debug) {
         String s1(s);
-        s1.concat(": enter to continue.");
+        s1.concat(": <char> + enter to continue.");
         publish(s1);
         waitForSerial();
       }
