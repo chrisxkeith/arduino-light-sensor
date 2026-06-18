@@ -11,7 +11,7 @@ class Utils {
       Serial.println(s);
     }
     static void checkSerial();
-    static bool waitForSerial(String s);
+    static void waitForSerial();
     static String msToString(unsigned long ms) {
       int totalSeconds = ms / 1000;
       int secs = totalSeconds % 60;
@@ -21,6 +21,14 @@ class Utils {
       char buf[100];
       sprintf(buf, "%02u:%02u:%02u", hours, minutes, secs);
       return String(buf);
+    }
+    static void doDebug(String s) {
+      if (debug) {
+        String (s);
+        s.concat(": enter to continue.");
+        publish(s);
+        waitForSerial();
+      }
     }
 };
 unsigned long Utils::lastPrintln = 0;
@@ -137,7 +145,7 @@ class OLEDWrapper {
 
 #define WIDTH     800
 #define HEIGHT    480
-Arduino_H7_Video  Display(WIDTH, HEIGHT, GigaDisplayShield);
+Arduino_H7_Video  *Display = nullptr;
 
 class OLEDWrapper {
   private:
@@ -148,10 +156,19 @@ class OLEDWrapper {
   public:
     void startup() {
       delay(3000);
-      Display.begin();
+      Utils::doDebug("About to call Display = new Arduino_H7_Video(WIDTH, HEIGHT, GigaDisplayShield)");
+      Display = new Arduino_H7_Video(WIDTH, HEIGHT, GigaDisplayShield);
+      Utils::doDebug("About to call Display->begin()");
+      Display->begin();
+      Utils::doDebug("About to call lv_obj_create(lv_scr_act())");
       screen = lv_obj_create(lv_scr_act());
-      lv_obj_set_size(screen, Display.width(), Display.height());
+      Utils::doDebug("About to call lv_obj_set_size()");
+      lv_obj_set_size(screen, Display->width(), Display->height());
+      Utils::doDebug("About to call setupGrid()");
       setupGrid();
+      Utils::doDebug("About to call setupLineStyle()");
+      setupLineStyle(&black, 2, lv_color_black());
+      setupLineStyle(&white, 4, lv_color_white());
     }
     void displayOff() {
       pinMode(74, OUTPUT);
@@ -162,10 +179,10 @@ class OLEDWrapper {
       digitalWrite(74, HIGH);
     }
     int getWidth() {
-      return Display.width();
+      return Display->width();
     }
     int getHeight() {
-      return Display.height();
+      return Display->height();
     }
     void fillRect(int x0, int y0, int x1, int y1, int color) {
       // no op
@@ -182,7 +199,7 @@ class OLEDWrapper {
 
       lv_obj_t* grid = lv_obj_create(lv_scr_act());
       lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
-      lv_obj_set_size(grid, Display.width(), Display.height());
+      lv_obj_set_size(grid, Display->width(), Display->height());
 
       gridCell = lv_label_create(grid);
       lv_obj_set_grid_cell(gridCell, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
@@ -227,27 +244,34 @@ class OLEDWrapper {
     lv_style_t    white;
     bool          draw1Black = true;
     bool          draw2Black = true;
+    lv_point_precise_t line_points1[2] = { {0, 0}, {WIDTH, HEIGHT} };
+    lv_point_precise_t line_points2[2] = { {WIDTH, 0}, {0, HEIGHT} };
+
   public:
     void lineTest() {
       if (millis() - lastUpdateTime > 3000) {
         if (counter % 2 == 0) {
           if (draw1Black) {
-            setDrawColor(COLOR_BLACK);
-            drawLine(0, 0, WIDTH, HEIGHT);
+            drawLines(line_points1, 2, &black);
+            // setDrawColor(COLOR_BLACK);
+            // drawLine(0, 0, WIDTH, HEIGHT);
             draw1Black = false;
           } else {
-            setDrawColor(COLOR_WHITE);
-            drawLine(0, 0, WIDTH, HEIGHT);
+            drawLines(line_points1, 2, &white);
+            // setDrawColor(COLOR_WHITE);
+            // drawLine(0, 0, WIDTH, HEIGHT);
             draw1Black = true;
           }
         } else {
           if (draw2Black) {
-            setDrawColor(COLOR_BLACK);
-            drawLine(WIDTH, 0, 0, HEIGHT);
+            drawLines(line_points2, 2, &black);
+            // setDrawColor(COLOR_BLACK);
+            // drawLine(WIDTH, 0, 0, HEIGHT);
             draw2Black = false;
           } else {
-            setDrawColor(COLOR_WHITE);
-            drawLine(WIDTH, 0, 0, HEIGHT);
+            drawLines(line_points2, 2, &white);
+            // setDrawColor(COLOR_WHITE);
+            // drawLine(WIDTH, 0, 0, HEIGHT);
             draw2Black = true;
           }
         }
@@ -468,8 +492,11 @@ class App {
   public:
     void setup() {
       Serial.begin(115200);
+      delay(2000);
       Utils::publish("setup() : started.");
+      Utils::doDebug("About to create OLEDWrapper");
       oledWrapper = new OLEDWrapper();
+      Utils::doDebug("About to call oledWrapper->startup()");
       oledWrapper->startup();
       showBuild();
       config.dump();
@@ -530,13 +557,11 @@ void Utils::checkSerial() {
     }
   }
 }
-bool Utils::waitForSerial(String s) {
-  if (Serial.available() > 0) {
-    String command = Serial.readString();
-    command.trim();
-    return (!command.equals(s));
+void Utils::waitForSerial() {
+  while (Serial.available() < 1) {
+    delay(500);
   }
-  return true;
+  Serial.readString();
 }
 
 void setup() {
