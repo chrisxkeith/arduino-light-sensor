@@ -187,7 +187,7 @@ class OLEDWrapper {
       gridCell = lv_label_create(grid);
       lv_obj_set_grid_cell(gridCell, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
                           LV_GRID_ALIGN_STRETCH, 0, 1);      //row
-      lv_obj_set_style_text_font(gridCell, &lv_font_montserrat_28, 0);
+      lv_obj_set_style_text_font(gridCell, &lv_font_montserrat_14, 0);
     }
     void display(String s, int textSize, uint8_t x, uint8_t y) {
       lv_label_set_text(gridCell, s.c_str());
@@ -219,6 +219,41 @@ class OLEDWrapper {
     void display(arduino::String [2], int) {
     }
     void display(arduino::String [2], int, uint8_t, uint8_t) {
+    }
+  private:
+    int           counter = 0;
+    unsigned long lastUpdateTime = 0;
+    lv_style_t    black;
+    lv_style_t    white;
+    bool          draw1Black = true;
+    bool          draw2Black = true;
+  public:
+    void lineTest() {
+      if (millis() - lastUpdateTime > 3000) {
+        if (counter % 2 == 0) {
+          if (draw1Black) {
+            setDrawColor(COLOR_BLACK);
+            drawLine(0, 0, WIDTH, HEIGHT);
+            draw1Black = false;
+          } else {
+            setDrawColor(COLOR_WHITE);
+            drawLine(0, 0, WIDTH, HEIGHT);
+            draw1Black = true;
+          }
+        } else {
+          if (draw2Black) {
+            setDrawColor(COLOR_BLACK);
+            drawLine(WIDTH, 0, 0, HEIGHT);
+            draw2Black = false;
+          } else {
+            setDrawColor(COLOR_WHITE);
+            drawLine(WIDTH, 0, 0, HEIGHT);
+            draw2Black = true;
+          }
+        }
+        lastUpdateTime = millis();
+        counter++;
+      }
     }
 };
 #endif
@@ -441,7 +476,11 @@ class App {
       Utils::publish("setup() : finished.");
     }
     void loop() {
+#ifdef USE_GFX
       display_on_oled();
+#else
+      oledWrapper->lineTest();
+#endif
       Utils::checkSerial();
       oledWrapper->handleTimer();
     }
