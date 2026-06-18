@@ -22,17 +22,17 @@ class Utils {
       sprintf(buf, "%02u:%02u:%02u", hours, minutes, secs);
       return String(buf);
     }
-    static void doDebug(String s) {
+    static void doDebug(const char* s) {
       if (debug) {
-        String (s);
-        s.concat(": enter to continue.");
-        publish(s);
+        String s1(s);
+        s1.concat(": enter to continue.");
+        publish(s1);
         waitForSerial();
       }
     }
 };
 unsigned long Utils::lastPrintln = 0;
-bool Utils::debug = false;
+bool Utils::debug = true;
 
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
