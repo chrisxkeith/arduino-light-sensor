@@ -11,7 +11,7 @@ class Utils {
       Serial.println(s);
     }
     static void checkSerial();
-    static void waitForSerial();
+    static bool waitForSerial(String s);
     static String msToString(unsigned long ms) {
       int totalSeconds = ms / 1000;
       int secs = totalSeconds % 60;
@@ -22,17 +22,9 @@ class Utils {
       sprintf(buf, "%02u:%02u:%02u", hours, minutes, secs);
       return String(buf);
     }
-    static void doDebug(const char* s) {
-      if (debug) {
-        String s1(s);
-        s1.concat(": <char> + enter to continue.");
-        publish(s1);
-        waitForSerial();
-      }
-    }
 };
 unsigned long Utils::lastPrintln = 0;
-bool Utils::debug = true;
+bool Utils::debug = false;
 
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
@@ -145,28 +137,23 @@ class OLEDWrapper {
 
 #define WIDTH     800
 #define HEIGHT    480
-Arduino_H7_Video  *Display = nullptr;
+Arduino_H7_Video  Display(WIDTH, HEIGHT, GigaDisplayShield);
 
 class OLEDWrapper {
   private:
     lv_obj_t*   gridCell = nullptr;
     lv_obj_t*   screen = nullptr;
     const int   DEFAULT_FONT_SIZE = 24;
+    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
+    lv_style_t    white;
     int         currentColor;
   public:
     void startup() {
       delay(3000);
-      Utils::doDebug("About to call Display = new Arduino_H7_Video(WIDTH, HEIGHT, GigaDisplayShield)");
-      Display = new Arduino_H7_Video(WIDTH, HEIGHT, GigaDisplayShield);
-      Utils::doDebug("About to call Display->begin()");
-      Display->begin();
-      Utils::doDebug("About to call lv_obj_create(lv_scr_act())");
+      Display.begin();
       screen = lv_obj_create(lv_scr_act());
-      Utils::doDebug("About to call lv_obj_set_size()");
-      lv_obj_set_size(screen, Display->width(), Display->height());
-      Utils::doDebug("About to call setupGrid()");
+      lv_obj_set_size(screen, Display.width(), Display.height());
       setupGrid();
-      Utils::doDebug("About to call setupLineStyle()");
       setupLineStyle(&black, 2, lv_color_black());
       setupLineStyle(&white, 4, lv_color_white());
     }
@@ -179,10 +166,10 @@ class OLEDWrapper {
       digitalWrite(74, HIGH);
     }
     int getWidth() {
-      return Display->width();
+      return Display.width();
     }
     int getHeight() {
-      return Display->height();
+      return Display.height();
     }
     void fillRect(int x0, int y0, int x1, int y1, int color) {
       // no op
@@ -199,12 +186,12 @@ class OLEDWrapper {
 
       lv_obj_t* grid = lv_obj_create(lv_scr_act());
       lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
-      lv_obj_set_size(grid, Display->width(), Display->height());
+      lv_obj_set_size(grid, Display.width(), Display.height());
 
       gridCell = lv_label_create(grid);
       lv_obj_set_grid_cell(gridCell, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
                           LV_GRID_ALIGN_STRETCH, 0, 1);      //row
-      lv_obj_set_style_text_font(gridCell, &lv_font_montserrat_14, 0);
+      lv_obj_set_style_text_font(gridCell, &lv_font_montserrat_28, 0);
     }
     void display(String s, int textSize, uint8_t x, uint8_t y) {
       lv_label_set_text(gridCell, s.c_str());
@@ -224,6 +211,12 @@ class OLEDWrapper {
       lv_obj_center(line1);
     }
     void drawLine(int x0, int y0, int x1, int y1) {
+      static lv_point_precise_t line_points[] = { {x0, y0}, {x1, y1} };
+      if (currentColor == COLOR_BLACK) {
+        drawLines(line_points, 2, &black);
+      } else {
+        drawLines(line_points, 2, &white);
+      }
     }
     void handleTimer() {
       lv_timer_handler();
@@ -237,53 +230,14 @@ class OLEDWrapper {
     }
     void display(arduino::String [2], int, uint8_t, uint8_t) {
     }
-  private:
-    int           counter = 0;
-    unsigned long lastUpdateTime = 0;
-    lv_style_t    black;
-    lv_style_t    white;
-    bool          draw1Black = true;
-    bool          draw2Black = true;
-    lv_point_precise_t line_points1[2] = { {0, 0}, {WIDTH, HEIGHT} };
-    lv_point_precise_t line_points2[2] = { {WIDTH, 0}, {0, HEIGHT} };
-
-  public:
-    void lineTest() {
-      if (millis() - lastUpdateTime > 3000) {
-        if (counter % 2 == 0) {
-          if (draw1Black) {
-            drawLines(line_points1, 2, &black);
-            // setDrawColor(COLOR_BLACK);
-            // drawLine(0, 0, WIDTH, HEIGHT);
-            draw1Black = false;
-          } else {
-            drawLines(line_points1, 2, &white);
-            // setDrawColor(COLOR_WHITE);
-            // drawLine(0, 0, WIDTH, HEIGHT);
-            draw1Black = true;
-          }
-        } else {
-          if (draw2Black) {
-            drawLines(line_points2, 2, &black);
-            // setDrawColor(COLOR_BLACK);
-            // drawLine(WIDTH, 0, 0, HEIGHT);
-            draw2Black = false;
-          } else {
-            drawLines(line_points2, 2, &white);
-            // setDrawColor(COLOR_WHITE);
-            // drawLine(WIDTH, 0, 0, HEIGHT);
-            draw2Black = true;
-          }
-        }
-        lastUpdateTime = millis();
-        counter++;
-      }
-    }
 };
 #endif
 
 OLEDWrapper* oledWrapper = nullptr;
 
+#include <vector>
+#include <cmath>
+#include <tuple>
 class Spinner {
   private:
     int middleX = oledWrapper->getWidth() / 2;
@@ -320,17 +274,15 @@ class Spinner {
       color = COLOR_WHITE;
       msWhenOn = millis();
     }
-    virtual void drawSpoke(int color, int startX, int startY, int endX, int endY) {
-      oledWrapper->setDrawColor(color);
-      oledWrapper->drawLine(startX, startY, endX, endY);
-    }
     void display() {
       if (millis() - lastDisplayTime < DISPLAY_INTERVAL) {
         return;
       }
       int xEnd = lineLength * cos(deg * M_PI / 180.0);
       int yEnd = lineLength * sin(deg * M_PI / 180.0);
-      drawSpoke(color, middleX, middleY, middleX + xEnd, middleY + yEnd);
+
+      oledWrapper->setDrawColor(color);
+      oledWrapper->drawLine(middleX, middleY, middleX + xEnd, middleY + yEnd);
       drawElapsed();
       deg += incrementDegrees;
       if (deg >= 360) {
@@ -354,38 +306,8 @@ class Spinner {
       s.concat(baseline);
       Utils::publish(s);
     }
-    virtual ~Spinner() = default;
 };
-#ifdef USE_GFX
 Spinner spinner(5);
-#else
-#include <vector>
-class LvglSpinner : public Spinner {
-  private:
-    std::vector<lv_obj_t*> spokes;
-  public:
-    LvglSpinner(int incrementDegrees) : Spinner(incrementDegrees) {
-    }
-    void drawSpoke(int color, int startX, int startY, int endX, int endY) override {
-      if (color == COLOR_BLACK) {
-        lv_point_precise_t* line_points = new lv_point_precise_t[2];
-        line_points[0] = { startX, startY };
-        line_points[1] = { endX, endY };
-        lv_obj_t*           spoke = lv_line_create(lv_scr_act());
-        lv_line_set_points(spoke, line_points, 2);
-        lv_style_t*    black = new lv_style_t();
-        oledWrapper->setupLineStyle(black, 2, lv_color_black());
-        lv_obj_add_style(spoke, black, 0);
-        spokes.push_back(spoke);
-      } else {
-        lv_obj_t* spoke = *spokes.begin();
-        spokes.erase(spokes.begin());
-        lv_obj_del(spoke);
-      }
-    }
-};
-LvglSpinner spinner(5);
-#endif
 
 class Sensor {
   private:
@@ -492,22 +414,15 @@ class App {
   public:
     void setup() {
       Serial.begin(115200);
-      delay(2000);
       Utils::publish("setup() : started.");
-      Utils::doDebug("About to create OLEDWrapper");
       oledWrapper = new OLEDWrapper();
-      Utils::doDebug("About to call oledWrapper->startup()");
       oledWrapper->startup();
       showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
     }
     void loop() {
-#ifdef USE_GFX
       display_on_oled();
-#else
-      oledWrapper->lineTest();
-#endif
       Utils::checkSerial();
       oledWrapper->handleTimer();
     }
@@ -557,11 +472,13 @@ void Utils::checkSerial() {
     }
   }
 }
-void Utils::waitForSerial() {
-  while (Serial.available() < 1) {
-    delay(500);
+bool Utils::waitForSerial(String s) {
+  if (Serial.available() > 0) {
+    String command = Serial.readString();
+    command.trim();
+    return (!command.equals(s));
   }
-  Serial.readString();
+  return true;
 }
 
 void setup() {
