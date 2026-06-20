@@ -28,10 +28,7 @@ bool Utils::debug = false;
 
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
-#define USE_GFX
-#ifdef USE_GFX
 #include "Arduino_GigaDisplay_GFX.h"
-const int COLOR_RED = 0xF800;
 
 GigaDisplay_GFX display_;
 
@@ -85,24 +82,6 @@ class OLEDWrapper {
       s.concat(getWidth());
       Utils::publish(s);
     }
-    void test1() {
-      clear();
-      for (int r = 0; r < 2; r++) {
-        display_.setRotation(r);
-        String s("r: ");
-        s.concat(r);
-        s.concat(" w: ");
-        s.concat(getWidth());
-        s.concat(" h: ");
-        s.concat(getHeight());
-        display(s, 3, 0, 0);
-        if (r == 0) {
-          display_.drawLine(0, 0, getWidth(), getHeight(), COLOR_WHITE);
-        } else {
-          display_.drawLine(0, 0, getWidth(), getHeight(), COLOR_RED);
-        }
-      }
-    }
     void test2() {
       for (int r = 0; r < 4; r++) {
         clear();
@@ -129,110 +108,6 @@ class OLEDWrapper {
     void handleTimer() {
     }
 };
-#else
-#include "Arduino_H7_Video.h"
-
-#include "lvgl.h"
-#include "/home/ck/Arduino/libraries/lvgl/src/misc/lv_color.h" // why can't Visual Studio find this on its own?
-
-#define WIDTH     800
-#define HEIGHT    480
-Arduino_H7_Video  Display(WIDTH, HEIGHT, GigaDisplayShield);
-
-class OLEDWrapper {
-  private:
-    lv_obj_t*   gridCell = nullptr;
-    lv_obj_t*   screen = nullptr;
-    const int   DEFAULT_FONT_SIZE = 24;
-    lv_style_t    black; // create and delete lines objects instead, e.g., lv_obj_del(my_line_object);
-    lv_style_t    white;
-    int         currentColor;
-  public:
-    void startup() {
-      delay(3000);
-      Display.begin();
-      screen = lv_obj_create(lv_scr_act());
-      lv_obj_set_size(screen, Display.width(), Display.height());
-      setupGrid();
-      setupLineStyle(&black, 2, lv_color_black());
-      setupLineStyle(&white, 4, lv_color_white());
-    }
-    void displayOff() {
-      pinMode(74, OUTPUT);
-      digitalWrite(74, LOW);
-    }
-    void displayOn() {
-      pinMode(74, OUTPUT);
-      digitalWrite(74, HIGH);
-    }
-    int getWidth() {
-      return Display.width();
-    }
-    int getHeight() {
-      return Display.height();
-    }
-    void fillRect(int x0, int y0, int x1, int y1, int color) {
-      // no op
-    }
-    void setupLineStyle(lv_style_t *line_style, int width, lv_color_t color) {
-      lv_style_init(line_style);
-      lv_style_set_line_width(line_style, width);
-      lv_style_set_line_color(line_style, color);
-      lv_style_set_line_rounded(line_style, true);
-    }
-    void setupGrid() {
-      static lv_coord_t col_dsc[] = { WIDTH - 50, LV_GRID_TEMPLATE_LAST };
-      static lv_coord_t row_dsc[] = { HEIGHT - 50, LV_GRID_TEMPLATE_LAST };
-
-      lv_obj_t* grid = lv_obj_create(lv_scr_act());
-      lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
-      lv_obj_set_size(grid, Display.width(), Display.height());
-
-      gridCell = lv_label_create(grid);
-      lv_obj_set_grid_cell(gridCell, LV_GRID_ALIGN_STRETCH, 0, 1,  //column
-                          LV_GRID_ALIGN_STRETCH, 0, 1);      //row
-      lv_obj_set_style_text_font(gridCell, &lv_font_montserrat_28, 0);
-    }
-    void display(String s, int textSize, uint8_t x, uint8_t y) {
-      lv_label_set_text(gridCell, s.c_str());
-    }
-    void display(String s) {
-      display(s, DEFAULT_FONT_SIZE, 10, 10);
-    }
-    void setDrawColor(int color) {
-      currentColor = color;
-    }
-    void drawLines(lv_point_precise_t line_points[], int nPoints, lv_style_t *line_style) {
-      /*Create a line and apply the new style*/
-      lv_obj_t * line1;
-      line1 = lv_line_create(lv_scr_act());
-      lv_line_set_points(line1, line_points, nPoints);
-      lv_obj_add_style(line1, line_style, 0);
-      lv_obj_center(line1);
-    }
-    void drawLine(int x0, int y0, int x1, int y1) {
-      static lv_point_precise_t line_points[] = { {x0, y0}, {x1, y1} };
-      if (currentColor == COLOR_BLACK) {
-        drawLines(line_points, 2, &black);
-      } else {
-        drawLines(line_points, 2, &white);
-      }
-    }
-    void handleTimer() {
-      lv_timer_handler();
-      delay(5);
-    }
-    void dump() {
-    }
-    void clear() {
-    }
-    void display(arduino::String [2], int) {
-    }
-    void display(arduino::String [2], int, uint8_t, uint8_t) {
-    }
-};
-#endif
-
 OLEDWrapper* oledWrapper = nullptr;
 
 #include <vector>
