@@ -152,14 +152,29 @@ class Spinner {
     unsigned long lastDisplayTime = 0;
     const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
 
+    void getTextBounds(String string, int x, int y, int16_t* x1, int16_t* y1, uint16_t* x2, uint16_t* y2) {
+      uint16_t w;
+      uint16_t h;
+      display_.getTextBounds(string, x, y, x1, y1, &w, &h);
+      *x2 = *x1 + w - 1;
+      *y2 = *y1 + h - 1;
+    }
+    int prevBaseline = 0;
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-      oledWrapper->fillRect(0, 0, 145, oledWrapper->getHeight(), COLOR_BLACK);
+      int16_t x1;
+      int16_t y1;
+      uint16_t x2;
+      uint16_t y2;
+      getTextBounds(s, 0, prevBaseline, &x1, &y1, &x2, &y2);
+      oledWrapper->fillRect(x1, y1, x2, y2, COLOR_BLACK);
       oledWrapper->display(s, 3, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
+        prevBaseline = baseline;
         baseline += 3;
-        if (baseline > oledWrapper->getHeight() - 20) {
+        getTextBounds(s, 0, baseline, &x1, &y1, &x2, &y2);
+        if (y2 > oledWrapper->getHeight()) {
           baseline = 0;
         }
         lastShift = millis();
@@ -273,7 +288,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "Thu May 21 05:43:26 PM PDT 2026";
+    const String build = "~Sat Jun 20 04:15:24 PM PDT 2026";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
