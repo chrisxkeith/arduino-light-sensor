@@ -29,6 +29,10 @@ bool Utils::debug = false;
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
 #include "Arduino_GigaDisplay_GFX.h"
+#include "Fonts/Org_01.h"
+#include "Fonts/Picopixel.h"
+#include "Fonts/Tiny3x3a2pt7b.h"
+#include "Fonts/TomThumb.h"
 
 GigaDisplay_GFX display_;
 
@@ -62,6 +66,9 @@ class OLEDWrapper {
     void setDrawColor(int color) {
       currentColor = color;
     }
+   void setFont(const GFXfont* font) {
+     display_.setFont(font);
+   }
     void drawLine(int x0, int y0, int x1, int y1) {
       // Rotate not happening automatically?
       display_.drawLine(y0, x0, y1, x1, currentColor);
@@ -105,7 +112,25 @@ class OLEDWrapper {
         delay(5000);
       }
     }
-    void handleTimer() {
+    void fontTest() {
+      clear();
+      setFont(&Org_01);
+      display("Org_01", 1, 0, 10);
+      delay(10000);
+      clear();
+      setFont(&Picopixel);
+      display("Picopixel", 1, 0, 30);
+      delay(10000);
+      clear();
+      setFont(&Tiny3x3a2pt7b);
+      display("Tiny3x3a2pt7b", 1, 0, 50);
+      delay(10000);
+      clear();
+      setFont(&TomThumb);
+      display("TomThumb", 1, 0, 70);
+      delay(10000);
+      clear();
+      setFont(nullptr);
     }
 };
 OLEDWrapper* oledWrapper = nullptr;
@@ -295,11 +320,11 @@ class App {
       showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
+      // oledWrapper->fontTest();
     }
     void loop() {
       display_on_oled();
       Utils::checkSerial();
-      oledWrapper->handleTimer();
     }
     void showBuild() {
       oledWrapper->clear();
