@@ -29,6 +29,7 @@ bool Utils::debug = false;
 const int COLOR_WHITE = 0x65535;
 const int COLOR_BLACK = 0x0;
 #include "Arduino_GigaDisplay_GFX.h"
+#include "Fonts/FreeSansOblique9pt7b.h"
 #include "Fonts/Org_01.h"
 #include "Fonts/Picopixel.h"
 #include "Fonts/Tiny3x3a2pt7b.h"
@@ -66,9 +67,16 @@ class OLEDWrapper {
     void setDrawColor(int color) {
       currentColor = color;
     }
-   void setFont(const GFXfont* font) {
-     display_.setFont(font);
-   }
+    void setFont(const GFXfont* font) {
+      display_.setFont(font);
+    }
+    void getTextBounds(String string, int x, int y, int16_t* x1, int16_t* y1, uint16_t* x2, uint16_t* y2) {
+      uint16_t w;
+      uint16_t h;
+      display_.getTextBounds(string, x, y, x1, y1, &w, &h);
+      *x2 = *x1 + w;
+      *y2 = *y1 + h;
+    }
     void drawLine(int x0, int y0, int x1, int y1) {
       // Rotate not happening automatically?
       display_.drawLine(y0, x0, y1, x1, currentColor);
@@ -112,24 +120,30 @@ class OLEDWrapper {
         delay(5000);
       }
     }
+    void oneFontTest(const GFXfont* font, String fontName) {
+      int16_t x1;
+      int16_t y1;
+      uint16_t w;
+      uint16_t h;
+
+      clear();
+      setFont(font);
+      display_.getTextBounds(fontName, 0, 0, &x1, &y1, &w, &h);
+      String s(fontName);
+      s.concat(", w: ");
+      s.concat(w);
+      s.concat(", h: ");
+      s.concat(h);
+      display(s, 10, 10, 10);
+      Utils::publish(s);
+      delay(10000);
+    }
     void fontTest() {
-      clear();
-      setFont(&Org_01);
-      display("Org_01", 1, 0, 10);
-      delay(10000);
-      clear();
-      setFont(&Picopixel);
-      display("Picopixel", 1, 0, 30);
-      delay(10000);
-      clear();
-      setFont(&Tiny3x3a2pt7b);
-      display("Tiny3x3a2pt7b", 1, 0, 50);
-      delay(10000);
-      clear();
-      setFont(&TomThumb);
-      display("TomThumb", 1, 0, 70);
-      delay(10000);
-      clear();
+      oneFontTest(&Org_01, "Org_01");
+      oneFontTest(&Picopixel, "Picopixel");
+      oneFontTest(&Tiny3x3a2pt7b, "Tiny3x3a2pt7b");
+      oneFontTest(&TomThumb, "TomThumb");
+      oneFontTest(&FreeSansOblique9pt7b, "FreeSansOblique9pt7b");
       setFont(nullptr);
     }
 };
@@ -152,13 +166,6 @@ class Spinner {
     unsigned long lastDisplayTime = 0;
     const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
 
-    void getTextBounds(String string, int x, int y, int16_t* x1, int16_t* y1, uint16_t* x2, uint16_t* y2) {
-      uint16_t w;
-      uint16_t h;
-      display_.getTextBounds(string, x, y, x1, y1, &w, &h);
-      *x2 = *x1 + w - 1;
-      *y2 = *y1 + h - 1;
-    }
     int prevBaseline = 0;
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
@@ -167,13 +174,13 @@ class Spinner {
       int16_t y1;
       uint16_t x2;
       uint16_t y2;
-      getTextBounds(s, 0, prevBaseline, &x1, &y1, &x2, &y2);
+      oledWrapper->getTextBounds(s, 0, prevBaseline, &x1, &y1, &x2, &y2);
       oledWrapper->fillRect(x1, y1, x2, y2, COLOR_BLACK);
       oledWrapper->display(s, 3, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
         prevBaseline = baseline;
         baseline += 3;
-        getTextBounds(s, 0, baseline, &x1, &y1, &x2, &y2);
+        oledWrapper->getTextBounds(s, 0, baseline, &x1, &y1, &x2, &y2);
         if (y2 > oledWrapper->getHeight()) {
           baseline = 0;
         }
