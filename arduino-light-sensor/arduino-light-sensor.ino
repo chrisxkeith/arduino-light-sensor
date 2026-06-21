@@ -128,13 +128,14 @@ class OLEDWrapper {
 
       clear();
       setFont(font);
+      display_.setTextSize(1);
       display_.getTextBounds(fontName, 0, 0, &x1, &y1, &w, &h);
       String s(fontName);
       s.concat(", w: ");
       s.concat(w);
       s.concat(", h: ");
       s.concat(h);
-      display(s, 10, 10, 10);
+      display(s, 1, 10, 10);
       Utils::publish(s);
       delay(10000);
     }
@@ -342,7 +343,6 @@ class App {
       showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
-      // oledWrapper->fontTest();
     }
     void loop() {
       display_on_oled();
