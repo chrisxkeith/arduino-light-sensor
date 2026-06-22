@@ -74,12 +74,17 @@ class OLEDWrapper {
     void setFont(const GFXfont* font) {
       display_.setFont(font);
     }
-    void getTextBounds(String string, const GFXfont* font, int textSize, int16_t* x1, int16_t* y1, uint16_t* x2, uint16_t* y2) {
+    void getTextBoundsWH(String string, const GFXfont* font, int textSize,
+                          int16_t x, int16_t y, int16_t* x1, int16_t* y1, uint16_t* w, uint16_t* h) {
       display_.setFont(font);
       display_.setTextSize(textSize);
+      display_.getTextBounds(string, x, y, x1, y1, w, h);
+    }
+    void getTextBounds(String string, const GFXfont* font, int textSize,
+                          int16_t* x1, int16_t* y1, uint16_t* x2, uint16_t* y2) {
       uint16_t w;
       uint16_t h;
-      display_.getTextBounds(string, 0, 0, x1, y1, &w, &h);
+      getTextBoundsWH(string, font, textSize, 0, 0, x1, y1, &w, &h);
       *x2 = *x1 + w;
       *y2 = *y1 + h;
     }
@@ -88,7 +93,10 @@ class OLEDWrapper {
       display_.drawLine(y0, x0, y1, x1, currentColor);
     }
     void fillRect(int x0, int y0, int x1, int y1, int color) {
-      display_.fillRect(x0, y0, x1 - x0, y1 - y0, color);
+      display_.fillRect(x0, y0, x1 - x0, y1 - y0, color); // is there an off-by-one error here?
+    }  
+    void fillRectWH(int x0, int y0, int w, int h, int color) {
+      display_.fillRect(x0, y0, w, h, color);
     }  
     int getHeight() {
       return display_.height();
@@ -174,14 +182,29 @@ class Spinner {
     const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
 
     int prevBaseline = 0;
-    int16_t getStartBaseline() {
-/*      int16_t x1;
+    String bounds() {
+      int16_t x1;
       int16_t y1;
-      uint16_t x2;
-      uint16_t y2;
-      oledWrapper->getTextBounds("00:00:00", &FreeSans18pt7b, 1, &x1, &y1, &x2, &y2);
-      return y2;
-*/
+      uint16_t w;
+      uint16_t h;
+      oledWrapper->getTextBoundsWH("00:00:00", &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &w, &h);
+      String s("bounds: x1: ");
+      s.concat(x1);
+      s.concat(", y1: ");
+      s.concat(y1);
+      s.concat(", w: ");
+      s.concat(w);
+      s.concat(", h: ");
+      s.concat(h);
+      return s;
+    }
+    int16_t getStartBaseline() {
+      int16_t x1;
+      int16_t y1;
+      uint16_t w;
+      uint16_t h;
+      oledWrapper->getTextBoundsWH("00:00:00", &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &w, &h);
+      // return h;
       return 32;      
     }
     void drawElapsed() {
@@ -245,6 +268,8 @@ class Spinner {
       s.concat(lineLength);
       s.concat(", baseline: ");
       s.concat(baseline);
+      s.concat(", ");
+      s.concat(bounds());
       Utils::publish(s);
     }
 };
