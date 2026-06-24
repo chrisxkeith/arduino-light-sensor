@@ -210,7 +210,9 @@ class Spinner {
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-      oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 1, stringHeight + 1, COLOR_BLACK);
+
+      // TODO: write some tests to figure out why the '5' kludge below is necessary.
+      oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 5, stringHeight + 5, COLOR_BLACK);
       oledWrapper->display(s, &FreeSans18pt7b, 1, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
         prevBaseline = baseline;
