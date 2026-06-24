@@ -222,16 +222,31 @@ class Spinner {
         }
       }
     }
-    void drawElapsed() {
+#define TESTING
+#ifdef TESTING
+#define SHIFT 10
+#define DELAY 1
+#else
+#define SHIFT 3
+#define DELAY 10
+#endif
+void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
       // + 1 and + 4 are specific to this font and size.
       oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 1, stringHeight + 4, COLOR_BLACK);
       oledWrapper->display(s, &FreeSans18pt7b, 1, 0, baseline);
-      if (millis() - lastShift > 1000 * 10) {
+      if (millis() - lastShift > 1000 * DELAY) {
         prevBaseline = baseline;
-        baseline += 3;
-        if (baseline > oledWrapper->getHeight()) { // no descenders on digits
+        baseline += SHIFT;
+        if (baseline > oledWrapper->getHeight() + 4) {
+#ifdef TESTING
+          String s1("baseline: ");
+          s1.concat(baseline);
+          s1.concat(", oledWrapper->getHeight(): ");
+          s1.concat(oledWrapper->getHeight());
+          Utils::publish(s1);
+#endif
           baseline = stringHeight;
         }
         lastShift = millis();
@@ -394,7 +409,6 @@ class App {
       Utils::publish("setup() : started.");
       oledWrapper = new OLEDWrapper();
       oledWrapper->startup();
-      showBuild();
       config.dump();
       Utils::publish("setup() : finished.");
     }
