@@ -222,7 +222,7 @@ class Spinner {
         }
       }
     }
-#define TESTING
+// #define TESTING
 #ifdef TESTING
 #define SHIFT 10
 #define DELAY 1
@@ -239,14 +239,9 @@ void drawElapsed() {
       if (millis() - lastShift > 1000 * DELAY) {
         prevBaseline = baseline;
         baseline += SHIFT;
-        if (baseline > oledWrapper->getHeight() + 4) {
-#ifdef TESTING
-          String s1("baseline: ");
-          s1.concat(baseline);
-          s1.concat(", oledWrapper->getHeight(): ");
-          s1.concat(oledWrapper->getHeight());
-          Utils::publish(s1);
-#endif
+        if (baseline > 230) {
+          // GFX can't display text below y=239, or is it a very subtle bug of mine?
+          // https://github.com/chrisxkeith/gfx-font-test indicates it's not mine.
           baseline = stringHeight;
         }
         lastShift = millis();
@@ -295,7 +290,6 @@ void drawElapsed() {
       s.concat(", baseline: ");
       s.concat(baseline);
       s.concat(", ");
-      s.concat(bounds());
       Utils::publish(s);
     }
 };
