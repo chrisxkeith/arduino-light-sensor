@@ -9,6 +9,7 @@ class Utils {
         delay(1000);
       }
       Serial.println(s);
+      lastPrintln = millis();
     }
     static void checkSerial();
     static bool waitForSerial(String s);
@@ -182,6 +183,8 @@ class Spinner {
     const unsigned long DISPLAY_INTERVAL = 200; // milliseconds
 
     int prevBaseline = 0;
+    uint16_t stringWidth = 0; // zeros are max width chars, so may be a little wider than the actual string width, but good enough for our purposes.
+    uint16_t stringHeight = 0;
     String bounds() {
       int16_t x1;
       int16_t y1;
@@ -201,27 +204,18 @@ class Spinner {
     int16_t getStartBaseline() {
       int16_t x1;
       int16_t y1;
-      uint16_t w;
-      uint16_t h;
-      oledWrapper->getTextBoundsWH("00:00:00", &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &w, &h);
-      // return h;
-      return 32;      
+      oledWrapper->getTextBoundsWH("00:00:00", &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &stringWidth, &stringHeight);
+      return stringHeight;
     }
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-      int16_t x1;
-      int16_t y1;
-      uint16_t x2;
-      uint16_t y2;
-      oledWrapper->getTextBounds(s, &FreeSans18pt7b, 1, &x1, &y1, &x2, &y2);
-      oledWrapper->fillRect(x1, y1, x2, y2, COLOR_BLACK);
+      oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 1, stringHeight + 1, COLOR_BLACK);
       oledWrapper->display(s, &FreeSans18pt7b, 1, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
         prevBaseline = baseline;
         baseline += 3;
-        oledWrapper->getTextBounds(s, &FreeSans18pt7b, 1, &x1, &y1, &x2, &y2);
-        if (y2 > oledWrapper->getHeight()) {
+        if (baseline > oledWrapper->getHeight()) { // no descenders on digits
           baseline = getStartBaseline();
         }
         lastShift = millis();
@@ -339,7 +333,7 @@ Sensor lightSensor1(A0, "Arduino light sensor");
 
 class Config {
   public:
-    const String build = "~Sat Jun 20 04:15:24 PM PDT 2026";
+    const String build = "~Wed Jun 24 09:52:16 AM PDT 2026";
     void dump() {
       String s("gitHubRepository: https://github.com/chrisxkeith/arduino-light-sensor");
       Utils::publish(s);
