@@ -201,24 +201,38 @@ class Spinner {
       s.concat(h);
       return s;
     }
-    int16_t getStartBaseline() {
-      int16_t x1;
-      int16_t y1;
-      oledWrapper->getTextBoundsWH("00:00:00", &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &stringWidth, &stringHeight);
-      return stringHeight;
+    void getTextRectangle() {
+      stringWidth = 0;
+      stringHeight = 0;
+      for (int i = 0; i < 10; i++) {
+        char buf[100];
+        int ii = i * 10 + i;
+        sprintf(buf, "%02u:%02u:%02u", ii, ii, ii);
+        String    s(buf);
+        int16_t   x1;
+        int16_t   y1;
+        uint16_t  w;
+        uint16_t  h;
+        oledWrapper->getTextBoundsWH(s, &FreeSans18pt7b, 1, 0, 0, &x1, &y1, &w, &h);
+        if (w > stringWidth) {
+          stringWidth = w;
+        }
+        if (h > stringHeight) {
+          stringHeight = h;
+        }
+      }
     }
     void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
-
-      // TODO: write some tests to figure out why the '5' kludge below is necessary.
-      oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 5, stringHeight + 5, COLOR_BLACK);
+      // + 1 and + 4 are specific to this font and size.
+      oledWrapper->fillRectWH(0, prevBaseline - stringHeight, stringWidth + 1, stringHeight + 4, COLOR_BLACK);
       oledWrapper->display(s, &FreeSans18pt7b, 1, 0, baseline);
       if (millis() - lastShift > 1000 * 10) {
         prevBaseline = baseline;
         baseline += 3;
         if (baseline > oledWrapper->getHeight()) { // no descenders on digits
-          baseline = getStartBaseline();
+          baseline = stringHeight;
         }
         lastShift = millis();
       }
@@ -226,7 +240,8 @@ class Spinner {
   public:
     Spinner(int incrementDegrees) {
       this->incrementDegrees = incrementDegrees;
-      baseline = getStartBaseline();
+      getTextRectangle();
+      baseline = stringHeight;
       prevBaseline = baseline;
     }
     void reset() {
