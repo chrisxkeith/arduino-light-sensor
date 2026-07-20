@@ -222,12 +222,11 @@ class Spinner {
         }
       }
     }
+#define SHIFT 3
 // #define TESTING
 #ifdef TESTING
-#define SHIFT 10
 #define DELAY 1
 #else
-#define SHIFT 3
 #define DELAY 10
 #endif
 void drawElapsed() {
