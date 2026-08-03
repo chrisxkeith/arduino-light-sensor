@@ -229,6 +229,7 @@ class Spinner {
 #else
 #define DELAY 10
 #endif
+bool afterShift = false;
 void drawElapsed() {
       unsigned long elapsed = millis() - msWhenOn;
       String s = Utils::msToString(elapsed);
@@ -242,9 +243,19 @@ void drawElapsed() {
           // GFX can't display text below y=239, or is it a very subtle bug of mine?
           // https://github.com/chrisxkeith/gfx-font-test indicates it's not mine.
           baseline = stringHeight;
+          afterShift = true;
         }
         lastShift = millis();
       }
+#ifdef TESTING
+      if (afterShift) {
+        String s("afterShift: baseline: ");
+        s.concat(baseline);
+        s.concat(", prevBaseline: ");
+        s.concat(prevBaseline);
+        Utils::publish(s);
+      }
+#endif
     }
   public:
     Spinner(int incrementDegrees) {
